@@ -1,0 +1,15 @@
+{
+  "users": [
+    {
+      "id": "admin001",
+      "fullname": "Administrator",
+      "username": "admin",
+      "email": "admin@fireforce.com",
+      "passwordHash": "8302d59bf3385b38c2ece3ccc8c8ea11cb4cb8d19d556da93efdea74773bc2ee9702b8ad380c9964744a5000df21a5dc6a2b0255a1d531cfcbf3e2346950fcc6",
+      "passwordSalt": "f4f762cf1172fc2f8594e7626e939dbb",
+      "createdAt": "2025-12-10T00:00:00.000Z",
+      "role": "admin",
+      "lastLogin": "2025-12-09T23:04:32.622Z"
+    }
+  ]
+}

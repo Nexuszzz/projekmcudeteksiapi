@@ -1,0 +1,17 @@
+# Proxy Server Configuration - CONFIGURED
+# Rename this file to .env to use
+
+# Proxy Server Port
+PORT=8081
+
+# MQTT Broker (TCP)
+MQTT_HOST=13.213.57.228
+MQTT_PORT=1883
+MQTT_USERNAME=zaks
+MQTT_PASSWORD=engganngodinginginmcu
+
+# Topics to relay - lab/zaks/#
+TOPIC_EVENT=lab/zaks/event
+TOPIC_LOG=lab/zaks/log
+TOPIC_STATUS=lab/zaks/status
+TOPIC_ALERT=lab/zaks/alert

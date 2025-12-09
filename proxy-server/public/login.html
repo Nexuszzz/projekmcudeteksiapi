@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Force - Fire Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a0a 50%, #0a0505 100%);
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Fire Background */
+        .fire-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .fire-particle {
+            position: absolute;
+            bottom: -20px;
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, #ff6b35 0%, #f7931e 50%, transparent 100%);
+            border-radius: 50%;
+            animation: rise 4s infinite ease-in;
+            opacity: 0;
+        }
+
+        @keyframes rise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(1);
+            }
+            10% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100vh) scale(0.3);
+            }
+        }
+
+        /* Generate multiple fire particles */
+        .fire-particle:nth-child(1) { left: 5%; animation-delay: 0s; animation-duration: 3s; }
+        .fire-particle:nth-child(2) { left: 15%; animation-delay: 0.5s; animation-duration: 4s; }
+        .fire-particle:nth-child(3) { left: 25%; animation-delay: 1s; animation-duration: 3.5s; }
+        .fire-particle:nth-child(4) { left: 35%; animation-delay: 1.5s; animation-duration: 4.5s; }
+        .fire-particle:nth-child(5) { left: 45%; animation-delay: 2s; animation-duration: 3s; }
+        .fire-particle:nth-child(6) { left: 55%; animation-delay: 0.3s; animation-duration: 4s; }
+        .fire-particle:nth-child(7) { left: 65%; animation-delay: 0.8s; animation-duration: 3.5s; }
+        .fire-particle:nth-child(8) { left: 75%; animation-delay: 1.3s; animation-duration: 4.5s; }
+        .fire-particle:nth-child(9) { left: 85%; animation-delay: 1.8s; animation-duration: 3s; }
+        .fire-particle:nth-child(10) { left: 95%; animation-delay: 2.3s; animation-duration: 4s; }
+        .fire-particle:nth-child(11) { left: 10%; animation-delay: 2.8s; animation-duration: 3.5s; }
+        .fire-particle:nth-child(12) { left: 30%; animation-delay: 0.2s; animation-duration: 4.5s; }
+        .fire-particle:nth-child(13) { left: 50%; animation-delay: 0.7s; animation-duration: 3s; }
+        .fire-particle:nth-child(14) { left: 70%; animation-delay: 1.2s; animation-duration: 4s; }
+        .fire-particle:nth-child(15) { left: 90%; animation-delay: 1.7s; animation-duration: 3.5s; }
+
+        /* Main Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Login Card */
+        .auth-card {
+            background: rgba(20, 10, 10, 0.95);
+            border: 2px solid #ff4d00;
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 
+                0 0 40px rgba(255, 77, 0, 0.3),
+                0 0 80px rgba(255, 77, 0, 0.1),
+                inset 0 0 60px rgba(255, 77, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                rgba(255, 77, 0, 0.1) 60deg,
+                transparent 120deg
+            );
+            animation: rotate 10s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Logo Section */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .fire-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #ff4d00 0%, #ff8c00 50%, #ffcc00 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(255, 77, 0, 0.5);
+            animation: pulse-fire 2s infinite;
+        }
+
+        @keyframes pulse-fire {
+            0%, 100% { 
+                box-shadow: 0 0 30px rgba(255, 77, 0, 0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 50px rgba(255, 140, 0, 0.8);
+                transform: scale(1.05);
+            }
+        }
+
+        .fire-icon svg {
+            width: 45px;
+            height: 45px;
+            fill: #fff;
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+        }
+
+        .logo-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff4d00, #ff8c00, #ffcc00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 30px rgba(255, 77, 0, 0.5);
+        }
+
+        .logo-subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-top: 5px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Tab Switcher */
+        .tab-switcher {
+            display: flex;
+            margin-bottom: 30px;
+            background: rgba(255, 77, 0, 0.1);
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #ff4d00, #ff8c00);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 77, 0, 0.5);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #ff8c00;
+        }
+
+        /* Form Styles */
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: #ff8c00;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(255, 77, 0, 0.05);
+            border: 2px solid rgba(255, 77, 0, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Rajdhani', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ff4d00;
+            box-shadow: 0 0 20px rgba(255, 77, 0, 0.3);
+            background: rgba(255, 77, 0, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #666;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #ff4d00, #ff8c00);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 77, 0, 0.5);
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Error/Success Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.error {
+            background: rgba(255, 50, 50, 0.2);
+            border: 1px solid #ff3232;
+            color: #ff6b6b;
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(50, 255, 50, 0.2);
+            border: 1px solid #32ff32;
+            color: #6bff6b;
+            display: block;
+        }
+
+        /* Footer */
+        .auth-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .auth-footer a {
+            color: #ff8c00;
+            text-decoration: none;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Fire Force Badge */
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: linear-gradient(135deg, #ff4d00, #cc0000);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-family: 'Orbitron', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 5px 20px rgba(255, 77, 0, 0.5);
+        }
+
+        /* Company 8 Reference */
+        .company-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 77, 0, 0.2);
+        }
+
+        .company-badge span {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .company-number {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #ff4d00, #ff8c00);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .submit-btn.loading .btn-text {
+            display: none;
+        }
+
+        .submit-btn.loading .spinner {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 30px 20px;
+            }
+            
+            .logo-title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Fire Background -->
+    <div class="fire-background">
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+        <div class="fire-particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="auth-card">
+            <div class="badge">Special Fire Force</div>
+            
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="fire-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 3.134-7 7-7s7 3.134 7 7c0 3.866-3.134 7-7 7zm0-12c-2.761 0-5 2.239-5 5s2.239 5 5 5 5-2.239 5-5-2.239-5-5-5z"/>
+                        <path d="M12 1c.552 0 1 .448 1 1v3c0 .552-.448 1-1 1s-1-.448-1-1V2c0-.552.448-1 1-1zm0 18c.552 0 1 .448 1 1v1c0 .552-.448 1-1 1s-1-.448-1-1v-1c0-.552.448-1 1-1z"/>
+                        <path d="M12 7c2.5 0 4.5 2 4.5 4.5S14.5 16 12 16s-4.5-2-4.5-4.5S9.5 7 12 7zm0 2c-1.381 0-2.5 1.119-2.5 2.5s1.119 2.5 2.5 2.5 2.5-1.119 2.5-2.5S13.381 9 12 9z"/>
+                    </svg>
+                </div>
+                <h1 class="logo-title">Fire Force</h1>
+                <p class="logo-subtitle">Fire Detection System</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="tab-switcher">
+                <button class="tab-btn active" data-tab="login">Login</button>
+                <button class="tab-btn" data-tab="register">Register</button>
+            </div>
+
+            <!-- Message Display -->
+            <div id="message" class="message"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" name="username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" name="password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="btn-text">🔥 Login</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" name="fullname" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" name="username" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" name="password" placeholder="Create a password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" name="confirmPassword" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="btn-text">🔥 Create Account</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+
+            <!-- Company 8 Badge -->
+            <div class="company-badge">
+                <span>Special Fire Force Company</span>
+                <div class="company-number">8</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const forms = document.querySelectorAll('.auth-form');
+        const messageEl = document.getElementById('message');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Update active tab
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Show corresponding form
+                forms.forEach(form => {
+                    form.classList.remove('active');
+                    if (form.id === tab + 'Form') {
+                        form.classList.add('active');
+                    }
+                });
+                
+                // Clear message
+                hideMessage();
+            });
+        });
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+        }
+
+        function hideMessage() {
+            messageEl.className = 'message';
+            messageEl.textContent = '';
+        }
+
+        function setLoading(btn, loading) {
+            if (loading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Login Form Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('.submit-btn');
+            const formData = new FormData(form);
+            
+            hideMessage();
+            setLoading(btn, true);
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        password: formData.get('password')
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('🔥 Login successful! Redirecting...', 'success');
+                    // Store token
+                    localStorage.setItem('fireforce_token', data.token);
+                    localStorage.setItem('fireforce_user', JSON.stringify(data.user));
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showMessage(data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        });
+
+        // Register Form Handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('.submit-btn');
+            const formData = new FormData(form);
+            
+            hideMessage();
+
+            // Validate passwords match
+            if (formData.get('password') !== formData.get('confirmPassword')) {
+                showMessage('Passwords do not match!', 'error');
+                return;
+            }
+
+            setLoading(btn, true);
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fullname: formData.get('fullname'),
+                        username: formData.get('username'),
+                        email: formData.get('email'),
+                        password: formData.get('password')
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('🔥 Account created! You can now login.', 'success');
+                    // Switch to login tab
+                    setTimeout(() => {
+                        document.querySelector('[data-tab="login"]').click();
+                    }, 2000);
+                    form.reset();
+                } else {
+                    showMessage(data.error || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        });
+
+        // Check if already logged in
+        const token = localStorage.getItem('fireforce_token');
+        if (token) {
+            // Verify token and redirect if valid
+            fetch('/api/auth/verify', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem('fireforce_token');
+                localStorage.removeItem('fireforce_user');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+==============================================================
+🔄 CARA RESTART WHATSAPP SERVER DENGAN FIX BARU
+==============================================================
+
+User berada di folder: D:\webdevprojek\IotCobwengdev\whatsapp-server
+
+Script RESTART_WHATSAPP_SERVER.bat berada di: D:\webdevprojek\IotCobwengdev\
+
+==============================================================
+SOLUSI 1: Pindah ke Parent Directory Dulu
+==============================================================
+
+cd ..
+RESTART_WHATSAPP_SERVER.bat
+
+ATAU dalam 1 command:
+
+cd d:\webdevprojek\IotCobwengdev
+RESTART_WHATSAPP_SERVER.bat
+
+==============================================================
+SOLUSI 2: Run dari Current Directory
+==============================================================
+
+..\RESTART_WHATSAPP_SERVER.bat
+
+==============================================================
+SOLUSI 3: Full Path
+==============================================================
+
+d:\webdevprojek\IotCobwengdev\RESTART_WHATSAPP_SERVER.bat
+
+==============================================================
+ATAU LANGSUNG START NPM (QUICK METHOD)
+==============================================================
+
+Karena Anda sudah di folder whatsapp-server, langsung saja:
+
+npm start
+
+Ini akan restart WhatsApp server dengan code yang sudah saya fix.
+
+==============================================================
+MONITORING SETELAH START
+==============================================================
+
+Setelah npm start, perhatikan console output:
+
+✅ YANG HARUS MUNCUL:
+   - "WhatsApp Server running on http://localhost:3001"
+   - "MQTT Connected"
+   - "Subscribed to topics: lab/zaks/fire_photo"
+
+Ketika ada fire detection, perhatikan:
+   - "📸 Handling fire detection with photo..."
+   - "Trying fullPath: ..."
+   - "✅ Found photo at fullPath" (atau relativePath/HTTP)
+   - "📤 Sending photo to [recipient]..."
+   - "✅ Fire photo alert sent to [recipient]"
+
+==============================================================
+NEXT STEPS SETELAH SERVER RUNNING
+==============================================================
+
+1. JANGAN TUTUP WINDOW WhatsApp server (biarkan running)
+
+2. Buka CMD/PowerShell BARU
+
+3. Run test script:
+   cd d:\webdevprojek\IotCobwengdev
+   TEST_WHATSAPP_PHOTO.bat
+
+4. Atau langsung run fire detection:
+   cd d:\zakaiot
+   python fire_detect_esp32_ultimate.py
+
+5. Test dengan lighter/candle
+
+6. Check WhatsApp HP Anda - harus terima FOTO + caption!
+
+==============================================================

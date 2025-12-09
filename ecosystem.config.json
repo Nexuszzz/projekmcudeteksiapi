@@ -1,0 +1,40 @@
+{
+  "apps": [
+    {
+      "name": "proxy-server",
+      "script": "./server.js",
+      "cwd": "/home/ubuntu/sudahtapibelum/proxy-server",
+      "instances": 1,
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "500M",
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "8080"
+      },
+      "error_file": "/home/ubuntu/.pm2/logs/proxy-server-error.log",
+      "out_file": "/home/ubuntu/.pm2/logs/proxy-server-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    },
+    {
+      "name": "fire-detection",
+      "script": "fire_detect_record_ultimate.py",
+      "cwd": "/home/ubuntu/sudahtapibelum/python_scripts",
+      "interpreter": "python3",
+      "instances": 1,
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "1G",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "error_file": "/home/ubuntu/.pm2/logs/fire-detection-error.log",
+      "out_file": "/home/ubuntu/.pm2/logs/fire-detection-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    }
+  ]
+}
