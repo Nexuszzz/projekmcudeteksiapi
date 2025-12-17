@@ -5,6 +5,10 @@
  * Production Domains:
  * - Frontend: https://latom.flx.web.id
  * - Backend API: https://api.latom.flx.web.id
+ * 
+ * Go-WhatsApp (GOWA) Server:
+ * - Default port: 3000
+ * - GitHub: https://github.com/aldinokemal/go-whatsapp-web-multidevice
  */
 
 // Runtime detection function - called when needed
@@ -26,6 +30,10 @@ const isDomainAccess = () => {
 const getApiDomain = () => isDomainAccess() ? 'api.latom.flx.web.id' : '3.27.0.139:8080';
 const useHttps = () => isDomainAccess();
 
+// GOWA (Go-WhatsApp) Configuration
+// Default GOWA port is 3000
+const GOWA_PORT = import.meta.env.VITE_GOWA_PORT || '3000';
+
 // GETTER FUNCTIONS - computed fresh every call
 export const getApiConfig = () => {
   if (!isProduction()) {
@@ -33,8 +41,8 @@ export const getApiConfig = () => {
       API_BASE: 'http://localhost:8080',
       WS_URL: 'ws://localhost:8080/ws',
       VIDEO_API: 'http://localhost:8080/api/video',
-      WA_API: 'http://localhost:3001/api/whatsapp',
-      VOICE_CALL_API: 'http://localhost:3002/api/voice-call',
+      // GOWA API - Go-WhatsApp REST API (replaces Baileys)
+      GOWA_API: `http://localhost:${GOWA_PORT}`,
     };
   }
   
@@ -44,8 +52,8 @@ export const getApiConfig = () => {
     API_BASE: `${https ? 'https' : 'http'}://${apiDomain}`,
     WS_URL: `${https ? 'wss' : 'ws'}://${apiDomain}/ws`,
     VIDEO_API: `${https ? 'https' : 'http'}://${apiDomain}/api/video`,
-    WA_API: `${https ? 'https' : 'http'}://${apiDomain}/api/whatsapp`,
-    VOICE_CALL_API: `${https ? 'https' : 'http'}://${apiDomain}/api/voice-call`,
+    // GOWA API via proxy or direct
+    GOWA_API: `${https ? 'https' : 'http'}://${apiDomain}/gowa`,
   };
 };
 
@@ -56,15 +64,13 @@ export const API_CONFIG = getApiConfig();
 export const getWsUrl = () => getApiConfig().WS_URL;
 export const getApiBaseUrl = () => getApiConfig().API_BASE;
 export const getVideoApiUrl = () => getApiConfig().VIDEO_API;
-export const getWaApiUrl = () => getApiConfig().WA_API;
-export const getVoiceCallApiUrl = () => getApiConfig().VOICE_CALL_API;
+export const getGowaApiUrl = () => getApiConfig().GOWA_API;
 
 // Static exports (for backward compatibility, but prefer getters)
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getApiConfig().API_BASE;
 export const WS_URL = import.meta.env.VITE_WS_URL || getApiConfig().WS_URL;
 export const VIDEO_API_URL = import.meta.env.VITE_VIDEO_API_URL || getApiConfig().VIDEO_API;
-export const WA_API_URL = import.meta.env.VITE_WA_API_URL || getApiConfig().WA_API;
-export const VOICE_CALL_API_URL = import.meta.env.VITE_VOICE_CALL_API_URL || getApiConfig().VOICE_CALL_API;
+export const GOWA_API_URL = import.meta.env.VITE_GOWA_API_URL || getApiConfig().GOWA_API;
 
 // Log configuration
 console.log(`🌐 Running on: ${getHostname()}`);

@@ -1,4 +1,21 @@
-import { useState, useEffect } from 'react';
+/**
+ * WhatsApp Integration Component using Go-WhatsApp (GOWA) REST API
+ * 
+ * This component integrates with aldinokemal/go-whatsapp-web-multidevice
+ * Supports: QR Code & Pairing Code authentication
+ * 
+ * GOWA API Endpoints (default port 3000):
+ * - GET  /app/login          - QR Code login
+ * - GET  /app/login-with-code?phone=xxx - Pairing code login
+ * - GET  /app/logout         - Logout
+ * - GET  /app/reconnect      - Reconnect
+ * - GET  /app/devices        - Get connected devices
+ * - POST /send/message       - Send text message
+ * - POST /send/image         - Send image
+ * - POST /send/file          - Send file
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import {
   Smartphone,
   Key,
@@ -11,15 +28,17 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
-  Shield,
   Users,
   Phone,
-  Bell,
   QrCode,
   Scan,
+  RefreshCw,
+  Settings,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { useTelemetryStore } from '../store/useTelemetryStore';
-import VoiceCallManager from './VoiceCallManager';
+import { getGowaApiUrl } from '../config/api.config';
 
 type AuthMethod = 'qr' | 'pairing';
 
@@ -32,6 +51,7 @@ interface ConnectionState {
   pairingCode: string | null;
   qrCode: string | null;
   hasSession: boolean;
+  deviceName?: string;
 }
 
 interface Recipient {
@@ -41,27 +61,17 @@ interface Recipient {
   addedAt: number;
 }
 
-// Runtime detection - executed at runtime, not build time
-const getWaApiRuntime = (): string => {
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  console.log('📱 WhatsApp API hostname:', hostname);
-  
-  if (hostname === 'latom.flx.web.id') {
-    return 'https://api.latom.flx.web.id/api/whatsapp';
-  }
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api/whatsapp';
-  }
-  // IP access fallback
-  return 'http://3.27.0.139:8080/api/whatsapp';
-};
-
-// Use function call to get URL at runtime
-const API_BASE = getWaApiRuntime();
+interface GowaDevice {
+  device: string;
+  name: string;
+}
 
 export default function WhatsAppIntegration() {
   const { preferences } = useTelemetryStore();
   const isDark = preferences.theme === 'dark';
+  
+  // Get API URL dynamically - no hardcoded URLs
+  const GOWA_API = getGowaApiUrl();
   
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     status: 'disconnected',
@@ -80,129 +90,241 @@ export default function WhatsAppIntegration() {
   const [showAddRecipient, setShowAddRecipient] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [devices, setDevices] = useState<GowaDevice[]>([]);
 
-  // Phone number validation
+  // Phone number validation (Indonesian format)
   const validatePhoneNumber = (phone: string): boolean => {
-    // Indonesian phone format: 628xxxxxxxxxx (10-13 digits after 62)
     const regex = /^628\d{8,11}$/;
-    return regex.test(phone);
+    return regex.test(phone.replace(/[^0-9]/g, ''));
   };
 
-  // Fetch status periodically
-  useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // Format phone number for GOWA API (628xxx -> 628xxx@s.whatsapp.net)
+  const formatPhoneForGowa = (phone: string): string => {
+    const clean = phone.replace(/[^0-9]/g, '');
+    return `${clean}@s.whatsapp.net`;
+  };
 
-  // Fetch recipients
-  useEffect(() => {
-    fetchRecipients();
-  }, []);
-
-  async function fetchStatus() {
+  // Check GOWA connection status
+  const checkConnectionStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/status`);
-      const data = await res.json();
-      
-      // Auto-clear error after successful status fetch
-      if (data && error) {
-        setError(null);
-      }
-      
-      setConnectionState(data);
-    } catch (err) {
-      console.error('Failed to fetch status:', err);
-      // Don't show error for status check failures (could be server starting up)
-    }
-  }
-
-  async function fetchRecipients() {
-    try {
-      const res = await fetch(`${API_BASE}/recipients`);
-      const data = await res.json();
-      setRecipients(data.recipients || []);
-    } catch (err) {
-      console.error('Failed to fetch recipients:', err);
-    }
-  }
-
-  async function handleStart() {
-    setError(null);
-    
-    if (authMethod === 'pairing') {
-      if (!phoneNumber) {
-        setError('Masukkan nomor WhatsApp terlebih dahulu!');
-        return;
-      }
-      if (!validatePhoneNumber(phoneNumber)) {
-        setError('Format nomor salah! Gunakan format: 628xxxxxxxxxx (contoh: 628123456789)');
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          phoneNumber: authMethod === 'pairing' ? phoneNumber : null,
-          method: authMethod 
-        }),
+      const res = await fetch(`${GOWA_API}/app/devices`, {
+        headers: { 'Accept': 'application/json' }
       });
       
-      if (!res.ok) {
-        throw new Error(`Server responded with ${res.status}`);
-      }
-      
-      const data = await res.json();
-      if (data.success) {
-        console.log('✅ Connection started successfully');
-        setError(null);
-        // Force immediate status refresh
-        setTimeout(() => fetchStatus(), 500);
-      } else {
-        setError(data.error || 'Gagal memulai koneksi');
-      }
-    } catch (err) {
-      console.error('Start error:', err);
-      setError('Gagal menghubungi server WhatsApp. Pastikan server berjalan di port 3001.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleStop() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE}/stop`, { method: 'POST' });
       if (res.ok) {
-        console.log('✅ WhatsApp stopped successfully');
-        // Force immediate status refresh
-        setTimeout(() => fetchStatus(), 500);
+        const data = await res.json();
+        
+        if (data.code === 'SUCCESS' && data.results?.length > 0) {
+          setConnectionState(prev => ({
+            ...prev,
+            status: 'connected',
+            hasSession: true,
+            phone: data.results[0]?.name || 'Connected',
+            deviceName: data.results[0]?.device,
+          }));
+          setDevices(data.results);
+          setError(null);
+        } else {
+          setConnectionState(prev => ({
+            ...prev,
+            status: 'disconnected',
+            hasSession: false,
+            phone: null,
+          }));
+        }
+      } else {
+        setConnectionState(prev => ({
+          ...prev,
+          status: 'disconnected',
+          hasSession: false,
+        }));
       }
     } catch (err) {
-      console.error('Stop error:', err);
-      setError('Gagal menghentikan koneksi WhatsApp');
+      console.error('Status check error:', err);
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'error',
+      }));
+    }
+  }, [GOWA_API]);
+
+  // Poll connection status
+  useEffect(() => {
+    checkConnectionStatus();
+    const interval = setInterval(checkConnectionStatus, 5000);
+    return () => clearInterval(interval);
+  }, [checkConnectionStatus]);
+
+  // Load recipients from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('gowa_recipients');
+    if (saved) {
+      try {
+        setRecipients(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load recipients:', e);
+      }
+    }
+  }, []);
+
+  // Save recipients to localStorage
+  const saveRecipients = (newRecipients: Recipient[]) => {
+    localStorage.setItem('gowa_recipients', JSON.stringify(newRecipients));
+    setRecipients(newRecipients);
+  };
+
+  // Login with QR Code
+  async function handleQRLogin() {
+    setError(null);
+    setLoading(true);
+    setConnectionState(prev => ({ ...prev, status: 'connecting', qrCode: null }));
+    
+    try {
+      const res = await fetch(`${GOWA_API}/app/login`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.code === 'SUCCESS' && data.results?.qr_link) {
+        setConnectionState(prev => ({
+          ...prev,
+          status: 'connecting',
+          qrCode: data.results.qr_link,
+          authMethod: 'qr',
+        }));
+        setSuccess('QR Code generated! Scan dengan WhatsApp HP Anda');
+        pollForConnection();
+      } else if (data.code === 'SUCCESS' && data.results?.status === 'already connected') {
+        setConnectionState(prev => ({
+          ...prev,
+          status: 'connected',
+          hasSession: true,
+        }));
+        setSuccess('Sudah terhubung ke WhatsApp!');
+      } else {
+        throw new Error(data.message || 'Failed to generate QR code');
+      }
+    } catch (err: any) {
+      console.error('QR Login error:', err);
+      setError(`Gagal login QR: ${err.message}`);
+      setConnectionState(prev => ({ ...prev, status: 'error' }));
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleDeleteSession() {
-    if (!confirm('⚠️ Hapus sesi WhatsApp?\n\nAnda akan logout dari WhatsApp Web dan perlu pairing ulang dengan QR Code atau Pairing Code.')) return;
-
-    setLoading(true);
+  // Login with Pairing Code
+  async function handlePairingLogin() {
     setError(null);
+    
+    if (!phoneNumber) {
+      setError('Masukkan nomor WhatsApp terlebih dahulu!');
+      return;
+    }
+    
+    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+    if (!validatePhoneNumber(cleanPhone)) {
+      setError('Format nomor salah! Gunakan format: 628xxxxxxxxxx');
+      return;
+    }
+    
+    setLoading(true);
+    setConnectionState(prev => ({ ...prev, status: 'connecting', pairingCode: null }));
+    
     try {
-      const res = await fetch(`${API_BASE}/delete-session`, { method: 'POST' });
+      const res = await fetch(`${GOWA_API}/app/login-with-code?phone=${cleanPhone}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
       const data = await res.json();
       
-      if (data.success) {
-        console.log('✅ Session deleted successfully');
-        setPhoneNumber('');
+      if (data.code === 'SUCCESS' && data.results?.pair_code) {
+        setConnectionState(prev => ({
+          ...prev,
+          status: 'connecting',
+          pairingCode: data.results.pair_code,
+          authMethod: 'pairing',
+        }));
+        setSuccess(`Pairing Code: ${data.results.pair_code} - Masukkan di WhatsApp > Linked Devices`);
+        pollForConnection();
+      } else if (data.code === 'SUCCESS' && data.results?.status === 'already connected') {
+        setConnectionState(prev => ({
+          ...prev,
+          status: 'connected',
+          hasSession: true,
+        }));
+        setSuccess('Sudah terhubung ke WhatsApp!');
+      } else {
+        throw new Error(data.message || 'Failed to generate pairing code');
+      }
+    } catch (err: any) {
+      console.error('Pairing Login error:', err);
+      setError(`Gagal login pairing: ${err.message}`);
+      setConnectionState(prev => ({ ...prev, status: 'error' }));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Poll for successful connection after QR/Pairing
+  function pollForConnection() {
+    let attempts = 0;
+    const maxAttempts = 60;
+    
+    const poll = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const res = await fetch(`${GOWA_API}/app/devices`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        const data = await res.json();
+        
+        if (data.code === 'SUCCESS' && data.results?.length > 0) {
+          clearInterval(poll);
+          setConnectionState(prev => ({
+            ...prev,
+            status: 'connected',
+            hasSession: true,
+            phone: data.results[0]?.name || 'Connected',
+            qrCode: null,
+            pairingCode: null,
+          }));
+          setDevices(data.results);
+          setSuccess('✅ WhatsApp berhasil terhubung!');
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+      
+      if (attempts >= maxAttempts) {
+        clearInterval(poll);
+        setError('Timeout - silakan coba lagi');
+        setConnectionState(prev => ({ ...prev, status: 'disconnected' }));
+      }
+    }, 2000);
+  }
+
+  // Logout
+  async function handleLogout() {
+    if (!confirm('⚠️ Logout dari WhatsApp?\n\nAnda perlu scan QR/Pairing ulang untuk terhubung kembali.')) {
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await fetch(`${GOWA_API}/app/logout`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.code === 'SUCCESS') {
         setConnectionState({
           status: 'disconnected',
           phone: null,
@@ -213,76 +335,118 @@ export default function WhatsAppIntegration() {
           qrCode: null,
           hasSession: false,
         });
-        // Force immediate status refresh after deletion
-        setTimeout(() => fetchStatus(), 1000);
+        setDevices([]);
+        setSuccess('Berhasil logout dari WhatsApp');
       } else {
-        setError(data.error || 'Gagal menghapus session');
+        throw new Error(data.message || 'Logout failed');
       }
-    } catch (err) {
-      console.error('Delete session error:', err);
-      setError('Gagal menghapus session WhatsApp');
+    } catch (err: any) {
+      console.error('Logout error:', err);
+      setError(`Gagal logout: ${err.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleAddRecipient() {
+  // Reconnect
+  async function handleReconnect() {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await fetch(`${GOWA_API}/app/reconnect`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.code === 'SUCCESS') {
+        setSuccess('Reconnecting ke WhatsApp...');
+        setTimeout(checkConnectionStatus, 2000);
+      } else {
+        throw new Error(data.message || 'Reconnect failed');
+      }
+    } catch (err: any) {
+      console.error('Reconnect error:', err);
+      setError(`Gagal reconnect: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Add recipient
+  function handleAddRecipient() {
     if (!newRecipient.phone) {
-      alert('Masukkan nomor WhatsApp!');
+      setError('Masukkan nomor WhatsApp!');
       return;
     }
+    
+    const cleanPhone = newRecipient.phone.replace(/[^0-9]/g, '');
+    if (!validatePhoneNumber(cleanPhone)) {
+      setError('Format nomor salah! Gunakan format: 628xxxxxxxxxx');
+      return;
+    }
+    
+    const recipient: Recipient = {
+      id: Date.now().toString(),
+      phoneNumber: cleanPhone,
+      name: newRecipient.name || cleanPhone,
+      addedAt: Date.now(),
+    };
+    
+    const updated = [...recipients, recipient];
+    saveRecipients(updated);
+    setNewRecipient({ phone: '', name: '' });
+    setShowAddRecipient(false);
+    setSuccess(`✅ Penerima ${recipient.name} ditambahkan`);
+  }
 
+  // Remove recipient
+  function handleRemoveRecipient(id: string) {
+    if (!confirm('Hapus penerima ini?')) return;
+    const updated = recipients.filter(r => r.id !== id);
+    saveRecipients(updated);
+  }
+
+  // Send test message
+  async function handleTestSend(recipient: Recipient) {
+    if (connectionState.status !== 'connected') {
+      setError('WhatsApp belum terhubung!');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      const res = await fetch(`${API_BASE}/recipients`, {
+      const res = await fetch(`${GOWA_API}/send/message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({
-          phoneNumber: newRecipient.phone,
-          name: newRecipient.name || newRecipient.phone,
+          phone: formatPhoneForGowa(recipient.phoneNumber),
+          message: `🔥 *Test Alert - Fire Detection System*\n\nIni adalah pesan test dari sistem deteksi kebakaran.\n\n📅 ${new Date().toLocaleString('id-ID')}\n✅ Sistem berfungsi dengan baik`,
         }),
       });
+      
       const data = await res.json();
-      if (data.success) {
-        setRecipients([...recipients, data.recipient]);
-        setNewRecipient({ phone: '', name: '' });
-        setShowAddRecipient(false);
-      }
-    } catch (err) {
-      console.error('Add recipient error:', err);
-      alert('Gagal menambah penerima');
-    }
-  }
-
-  async function handleRemoveRecipient(id: string) {
-    if (!confirm('Hapus penerima ini?')) return;
-
-    try {
-      await fetch(`${API_BASE}/recipients/${id}`, { method: 'DELETE' });
-      setRecipients(recipients.filter((r) => r.id !== id));
-    } catch (err) {
-      console.error('Remove recipient error:', err);
-    }
-  }
-
-  async function handleTestSend(recipient: Recipient) {
-    try {
-      const res = await fetch(`${API_BASE}/test-send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipient: recipient.phoneNumber }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`✅ Pesan test berhasil dikirim ke ${recipient.name}`);
+      
+      if (data.code === 'SUCCESS') {
+        setSuccess(`✅ Pesan test berhasil dikirim ke ${recipient.name}`);
       } else {
-        alert('❌ Gagal mengirim pesan');
+        throw new Error(data.message || 'Failed to send message');
       }
-    } catch (err) {
-      console.error('Test send error:', err);
-      alert('Error mengirim pesan');
+    } catch (err: any) {
+      console.error('Send error:', err);
+      setError(`Gagal kirim pesan: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   }
 
+  // Get status config for UI
   const getStatusConfig = () => {
     switch (connectionState.status) {
       case 'connected':
@@ -309,7 +473,7 @@ export default function WhatsAppIntegration() {
           bg: 'bg-blue-500/10',
           border: 'border-blue-500/50',
           icon: Loader2,
-          text: `Syncing... ${connectionState.syncProgress}%`,
+          text: 'Syncing...',
           pulse: false,
         };
       case 'error':
@@ -344,7 +508,7 @@ export default function WhatsAppIntegration() {
     }`}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-500/20 rounded-xl border border-green-500/30">
               <Smartphone className="w-8 h-8 text-green-400" />
@@ -354,37 +518,55 @@ export default function WhatsAppIntegration() {
                 WhatsApp Integration
               </h1>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                Baileys API • QR Code / Pairing Code • Fire Alerts
+                Go-WhatsApp API • QR Code / Pairing Code • Fire Alerts
               </p>
             </div>
           </div>
 
           {/* Status Badge */}
-          <div
-            className={`flex items-center gap-3 px-6 py-3 rounded-xl border ${statusConfig.bg} ${statusConfig.border} backdrop-blur-sm transition-all duration-300`}
-          >
+          <div className={`flex items-center gap-3 px-6 py-3 rounded-xl border ${statusConfig.bg} ${statusConfig.border} backdrop-blur-sm transition-all duration-300`}>
             {statusConfig.pulse && (
               <div className="relative">
                 <div className="absolute inset-0 animate-ping bg-green-400 rounded-full opacity-30"></div>
                 <div className="relative w-3 h-3 bg-green-400 rounded-full"></div>
               </div>
             )}
-            <StatusIcon
-              className={`w-5 h-5 ${statusConfig.color} ${connectionState.status === 'connecting' || connectionState.status === 'syncing' ? 'animate-spin' : ''}`}
-            />
+            <StatusIcon className={`w-5 h-5 ${statusConfig.color} ${connectionState.status === 'connecting' ? 'animate-spin' : ''}`} />
             <span className={`font-semibold ${statusConfig.color}`}>
               {statusConfig.text}
             </span>
           </div>
         </div>
 
-        {/* Main Content Grid */}
+        {/* Alerts */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-400 font-medium">Error</p>
+              <p className="text-red-300 text-sm whitespace-pre-wrap">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-300">
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+            <p className="text-green-300">{success}</p>
+            <button onClick={() => setSuccess(null)} className="ml-auto text-green-400 hover:text-green-300">
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Main Grid */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Connection Panel */}
           <div className={`backdrop-blur-sm rounded-2xl p-6 shadow-2xl ${
-            isDark 
-              ? 'bg-gray-800/50 border border-gray-700/50' 
-              : 'bg-white border border-gray-200'
+            isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
           }`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -396,7 +578,7 @@ export default function WhatsAppIntegration() {
             </div>
 
             {connectionState.status === 'disconnected' && (
-              <div className="space-y-4 animate-fade-in">
+              <div className="space-y-4">
                 {/* Auth Method Selector */}
                 <div>
                   <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -405,402 +587,319 @@ export default function WhatsAppIntegration() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setAuthMethod('qr')}
-                      className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                         authMethod === 'qr'
                           ? 'bg-purple-500/20 border-purple-500 shadow-lg'
-                          : isDark 
-                            ? 'bg-gray-900/50 border-gray-600/50 hover:border-gray-500'
-                            : 'bg-gray-50 border-gray-300 hover:border-gray-400'
+                          : isDark ? 'bg-gray-900/50 border-gray-600/50 hover:border-gray-500' : 'bg-gray-50 border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <QrCode className={`w-7 h-7 ${authMethod === 'qr' ? 'text-purple-400' : 'text-gray-400'}`} />
-                      <div className={`font-semibold text-sm ${authMethod === 'qr' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <QrCode className={`w-8 h-8 ${authMethod === 'qr' ? 'text-purple-400' : 'text-gray-400'}`} />
+                      <span className={`font-semibold ${authMethod === 'qr' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         QR Code
-                      </div>
-                      <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Scan HP</div>
-                      {authMethod === 'qr' && (
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                      )}
+                      </span>
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Scan dengan HP</span>
                     </button>
 
                     <button
                       onClick={() => setAuthMethod('pairing')}
-                      className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                         authMethod === 'pairing'
                           ? 'bg-green-500/20 border-green-500 shadow-lg'
-                          : isDark 
-                            ? 'bg-gray-900/50 border-gray-600/50 hover:border-gray-500'
-                            : 'bg-gray-50 border-gray-300 hover:border-gray-400'
+                          : isDark ? 'bg-gray-900/50 border-gray-600/50 hover:border-gray-500' : 'bg-gray-50 border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <Scan className={`w-7 h-7 ${authMethod === 'pairing' ? 'text-green-400' : 'text-gray-400'}`} />
-                      <div className={`font-semibold text-sm ${authMethod === 'pairing' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <Scan className={`w-8 h-8 ${authMethod === 'pairing' ? 'text-green-400' : 'text-gray-400'}`} />
+                      <span className={`font-semibold ${authMethod === 'pairing' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         Pairing Code
-                      </div>
-                      <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>8 digit</div>
-                      {authMethod === 'pairing' && (
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      )}
+                      </span>
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>8 digit code</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Phone Number Input (only for pairing) */}
+                {/* Phone Input for Pairing */}
                 {authMethod === 'pairing' && (
-                  <div className="animate-slide-down">
+                  <div>
                     <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                       Nomor WhatsApp
                     </label>
-                    <div className="relative">
-                      <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                      <input
-                        type="text"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="628123456789"
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                          isDark 
-                            ? 'bg-gray-900/50 border border-gray-600/50 text-white placeholder-gray-500'
-                            : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400'
-                        }`}
-                      />
-                    </div>
-                    <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Format: 628xxx (tanpa + atau spasi)
+                    <input
+                      type="text"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="628123456789"
+                      className={`w-full px-4 py-3 rounded-xl border ${
+                        isDark 
+                          ? 'bg-gray-900/50 border-gray-600 text-white placeholder-gray-500' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                      } focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    />
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Format: 628xxxxxxxxxx (tanpa + atau spasi)
                     </p>
                   </div>
                 )}
 
-                {/* QR Method Instructions */}
-                {authMethod === 'qr' && (
-                  <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/30 animate-slide-down">
-                    <div className={`flex items-start gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      <QrCode className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold mb-1">QR Code Method:</p>
-                        <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Click Start → Scan QR dengan WhatsApp di HP</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error Display */}
-                {error && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-slide-down">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-400">{error}</p>
-                    </div>
-                  </div>
-                )}
-
+                {/* Connect Button */}
                 <button
-                  onClick={handleStart}
-                  disabled={loading || (authMethod === 'pairing' && !phoneNumber)}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-green-500/30"
+                  onClick={authMethod === 'qr' ? handleQRLogin : handlePairingLogin}
+                  disabled={loading}
+                  className="w-full py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Starting...
-                    </>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <>
-                      <Power className="w-5 h-5" />
-                      Start WhatsApp
-                    </>
+                    <Power className="w-5 h-5" />
                   )}
+                  {loading ? 'Connecting...' : 'Connect WhatsApp'}
                 </button>
-
-                {connectionState.hasSession && (
-                  <button
-                    onClick={handleDeleteSession}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-xl border border-red-500/30 transition-all duration-300"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Delete Saved Session
-                  </button>
-                )}
               </div>
             )}
 
             {/* QR Code Display */}
-            {connectionState.qrCode && connectionState.authMethod === 'qr' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-6 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl border border-purple-500/30">
-                  <div className="flex items-center gap-3 mb-4">
-                    <QrCode className="w-6 h-6 text-purple-400 animate-pulse" />
-                    <h3 className="text-lg font-bold text-white">
-                      Scan QR Code
-                    </h3>
-                  </div>
-                  <div className="flex justify-center p-4 bg-white rounded-xl mb-4">
-                    <img
-                      src={connectionState.qrCode}
-                      alt="QR Code"
-                      className="w-56 h-56"
-                    />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-300 mb-2">
-                      Scan dengan WhatsApp di HP Anda
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      WhatsApp → Settings → Linked Devices → Link a Device
-                    </p>
-                  </div>
+            {connectionState.status === 'connecting' && connectionState.qrCode && (
+              <div className="text-center space-y-4">
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Scan QR Code dengan WhatsApp di HP Anda
+                </p>
+                <div className="inline-block p-4 bg-white rounded-xl">
+                  <img 
+                    src={connectionState.qrCode} 
+                    alt="WhatsApp QR Code" 
+                    className="w-64 h-64"
+                  />
                 </div>
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  WhatsApp {'>'} Linked Devices {'>'} Link a Device
+                </p>
               </div>
             )}
 
             {/* Pairing Code Display */}
-            {connectionState.pairingCode && connectionState.authMethod === 'pairing' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Key className="w-6 h-6 text-green-400 animate-pulse" />
-                    <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      Pairing Code Ready!
-                    </h3>
-                  </div>
-                  
-                  {/* Large Code Display */}
-                  <div className="text-center mb-4">
-                    <p className="text-5xl font-mono font-bold text-green-400 tracking-widest mb-3 animate-pulse">
-                      {connectionState.pairingCode}
-                    </p>
-                    <p className="text-xs text-yellow-400">
-                      ⏱️ Kode akan expired dalam 2 menit
-                    </p>
-                  </div>
-
-                  {/* Step-by-step Instructions */}
-                  <div className={`rounded-lg p-4 space-y-2 ${isDark ? 'bg-gray-900/30' : 'bg-white/50'}`}>
-                    <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      📱 Langkah-langkah di WhatsApp HP:
-                    </p>
-                    <div className={`space-y-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">1.</span>
-                        <span>Buka <strong>WhatsApp</strong> di HP Anda</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">2.</span>
-                        <span>Tap <strong>⚙️ Settings</strong> (atau Menu <strong>☰</strong>)</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">3.</span>
-                        <span>Tap <strong>Linked Devices</strong></span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">4.</span>
-                        <span>Tap <strong>Link a Device</strong></span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">5.</span>
-                        <span>Pilih <strong>"Link with phone number instead"</strong></span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">6.</span>
-                        <span>Masukkan kode: <strong className="text-green-400 font-mono">{connectionState.pairingCode}</strong></span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-400 font-bold">7.</span>
-                        <span>Tap <strong>Link</strong> dan tunggu konfirmasi ✅</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Important Note */}
-                  <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <p className="text-xs text-yellow-400">
-                      ⚠️ <strong>PENTING:</strong> Kode ini ditampilkan di WEB, bukan dikirim ke HP Anda. 
-                      Anda harus buka WhatsApp dan masukkan kode secara manual.
-                    </p>
-                  </div>
+            {connectionState.status === 'connecting' && connectionState.pairingCode && (
+              <div className="text-center space-y-4">
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Masukkan kode ini di WhatsApp HP Anda
+                </p>
+                <div className="inline-block px-8 py-4 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl border border-green-500/30">
+                  <span className="text-4xl font-mono font-bold text-green-400 tracking-widest">
+                    {connectionState.pairingCode}
+                  </span>
                 </div>
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  WhatsApp {'>'} Linked Devices {'>'} Link a Device {'>'} Link with phone number
+                </p>
               </div>
             )}
 
-            {connectionState.status === 'syncing' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-white mb-2">
-                    Syncing Messages...
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    {connectionState.syncProgress}% Complete
-                  </p>
-                </div>
-                <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-500 rounded-full"
-                    style={{ width: `${connectionState.syncProgress}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-
+            {/* Connected State */}
             {connectionState.status === 'connected' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30">
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl ${isDark ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200'}`}>
                   <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-green-400" />
+                    <Wifi className="w-6 h-6 text-green-400" />
                     <div>
-                      <p className="font-semibold text-white">Connected</p>
-                      <p className="text-sm text-gray-400">
-                        Phone: {connectionState.phone}
+                      <p className={`font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                        Connected
+                      </p>
+                      <p className={`text-sm ${isDark ? 'text-green-300' : 'text-green-600'}`}>
+                        {connectionState.phone || 'WhatsApp Active'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleStop}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-xl border border-red-500/30 transition-all duration-300"
-                >
-                  <PowerOff className="w-5 h-5" />
-                  Stop Connection
-                </button>
+                {/* Connected Devices */}
+                {devices.length > 0 && (
+                  <div>
+                    <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Connected Devices:
+                    </p>
+                    <div className="space-y-2">
+                      {devices.map((device, idx) => (
+                        <div key={idx} className={`p-3 rounded-lg ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                          <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {device.name}
+                          </p>
+                          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {device.device}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <button
-                  onClick={handleDeleteSession}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-700/50 hover:bg-gray-700/70 text-gray-300 font-semibold rounded-xl border border-gray-600/30 transition-all duration-300"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  Delete Session
-                </button>
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleReconnect}
+                    disabled={loading}
+                    className={`py-2 px-4 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
+                      isDark 
+                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30' 
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    Reconnect
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    disabled={loading}
+                    className={`py-2 px-4 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
+                      isDark 
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30' 
+                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    }`}
+                  >
+                    <PowerOff className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {connectionState.status === 'error' && (
+              <div className="text-center space-y-4">
+                <div className={`p-4 rounded-xl ${isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200'}`}>
+                  <WifiOff className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                  <p className={`font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>
+                    Connection Error
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-600'}`}>
+                    Go-WhatsApp server tidak dapat dihubungi
+                  </p>
+                </div>
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Pastikan GOWA server berjalan di port 3000
+                </p>
               </div>
             )}
           </div>
 
           {/* Recipients Panel */}
           <div className={`backdrop-blur-sm rounded-2xl p-6 shadow-2xl ${
-            isDark 
-              ? 'bg-gray-800/50 border border-gray-700/50' 
-              : 'bg-white border border-gray-200'
+            isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
           }`}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Users className="w-5 h-5 text-purple-400" />
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <Users className="w-5 h-5 text-orange-400" />
                 </div>
                 <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Recipients ({recipients.length})
+                  Alert Recipients
                 </h2>
               </div>
               <button
-                onClick={() => setShowAddRecipient(!showAddRecipient)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg border border-purple-500/30 transition-all duration-300"
+                onClick={() => setShowAddRecipient(true)}
+                className="p-2 bg-green-500/20 rounded-lg text-green-400 hover:bg-green-500/30 transition-colors"
               >
-                <UserPlus className="w-4 h-4" />
-                Add
+                <UserPlus className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Add Recipient Form */}
             {showAddRecipient && (
-              <div className={`mb-4 p-4 rounded-xl space-y-3 animate-slide-down ${
-                isDark 
-                  ? 'bg-gray-900/50 border border-gray-700/50' 
-                  : 'bg-gray-50 border border-gray-200'
-              }`}>
-                <input
-                  type="text"
-                  value={newRecipient.phone}
-                  onChange={(e) =>
-                    setNewRecipient({ ...newRecipient, phone: e.target.value })
-                  }
-                  placeholder="628123456789"
-                  className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    isDark 
-                      ? 'bg-gray-800/50 border border-gray-600/50 text-white placeholder-gray-500'
-                      : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
-                />
-                <input
-                  type="text"
-                  value={newRecipient.name}
-                  onChange={(e) =>
-                    setNewRecipient({ ...newRecipient, name: e.target.value })
-                  }
-                  placeholder="Name (optional)"
-                  className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    isDark 
-                      ? 'bg-gray-800/50 border border-gray-600/50 text-white placeholder-gray-500'
-                      : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddRecipient}
-                    className="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all"
-                  >
-                    Add Recipient
-                  </button>
-                  <button
-                    onClick={() => setShowAddRecipient(false)}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all"
-                  >
-                    Cancel
-                  </button>
+              <div className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newRecipient.name}
+                    onChange={(e) => setNewRecipient(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Nama (opsional)"
+                    className={`w-full px-3 py-2 rounded-lg ${
+                      isDark ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    } border`}
+                  />
+                  <input
+                    type="text"
+                    value={newRecipient.phone}
+                    onChange={(e) => setNewRecipient(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="628123456789"
+                    className={`w-full px-3 py-2 rounded-lg ${
+                      isDark ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    } border`}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddRecipient}
+                      className="flex-1 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddRecipient(false);
+                        setNewRecipient({ phone: '', name: '' });
+                      }}
+                      className={`py-2 px-4 rounded-lg font-medium ${
+                        isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-300 text-gray-700'
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+            {/* Recipients List */}
+            <div className="space-y-3 max-h-96 overflow-y-auto">
               {recipients.length === 0 ? (
-                <div className="text-center py-12">
-                  <Bell className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-                  <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                    Belum ada penerima notifikasi
+                <div className="text-center py-8">
+                  <Users className={`w-12 h-12 mx-auto mb-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                  <p className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                    Belum ada penerima alert
                   </p>
-                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Tambahkan nomor untuk menerima alert kebakaran
+                  <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                    Tambahkan nomor untuk menerima notifikasi kebakaran
                   </p>
                 </div>
               ) : (
                 recipients.map((recipient) => (
                   <div
                     key={recipient.id}
-                    className={`p-4 rounded-xl transition-all duration-300 group ${
-                      isDark 
-                        ? 'bg-gray-900/50 border border-gray-700/50 hover:border-gray-600/50'
-                        : 'bg-gray-50 border border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'} flex items-center justify-between`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isDark ? 'bg-gray-600' : 'bg-gray-300'
+                      }`}>
+                        <Phone className={`w-5 h-5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+                      </div>
+                      <div>
+                        <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           {recipient.name}
                         </p>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                           +{recipient.phoneNumber}
                         </p>
-                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                          Added: {new Date(recipient.addedAt).toLocaleString('id-ID')}
-                        </p>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleTestSend(recipient)}
-                          disabled={connectionState.status !== 'connected'}
-                          className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Test send"
-                        >
-                          <Send className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleRemoveRecipient(recipient.id)}
-                          className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all"
-                          title="Remove"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleTestSend(recipient)}
+                        disabled={connectionState.status !== 'connected' || loading}
+                        className={`p-2 rounded-lg transition-colors ${
+                          connectionState.status === 'connected'
+                            ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                            : 'bg-gray-500/20 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title="Send test message"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveRecipient(recipient.id)}
+                        className={`p-2 rounded-lg ${
+                          isDark ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-red-100 text-red-600 hover:bg-red-200'
+                        } transition-colors`}
+                        title="Remove recipient"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))
@@ -809,73 +908,45 @@ export default function WhatsAppIntegration() {
           </div>
         </div>
 
-        {/* Emergency Voice Call Manager - NEW SECTION */}
-        <div className="animate-fade-in">
-          <VoiceCallManager isDark={isDark} />
-        </div>
-
-        {/* Alert Status Info */}
-        <div className="grid md:grid-cols-2 gap-6 mt-6">
-          <div className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-2xl border border-green-500/30 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-500/20 rounded-xl">
-                <Shield className="w-8 h-8 text-green-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Status Aman</h3>
-                <p className="text-sm text-gray-300 mt-1">
-                  Notifikasi akan dikirim jika tidak ada deteksi kebakaran
-                </p>
-              </div>
+        {/* API Info Card */}
+        <div className={`backdrop-blur-sm rounded-2xl p-6 shadow-2xl ${
+          isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+        }`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Settings className="w-5 h-5 text-purple-400" />
             </div>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              GOWA API Configuration
+            </h2>
           </div>
-
-          <div className="p-6 bg-gradient-to-br from-red-500/10 to-orange-600/10 rounded-2xl border border-red-500/30 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-500/20 rounded-xl animate-pulse">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Status Beresiko</h3>
-                <p className="text-sm text-gray-300 mt-1">
-                  Alert otomatis dengan data sensor (suhu, kelembapan, gas)
-                </p>
-              </div>
-            </div>
+          <div className={`p-4 rounded-xl font-mono text-sm ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              <span className="text-purple-400">API URL:</span> {GOWA_API}
+            </p>
+            <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className="text-green-400">Status:</span>{' '}
+              <span className={connectionState.status === 'connected' ? 'text-green-400' : 'text-yellow-400'}>
+                {connectionState.status}
+              </span>
+            </p>
+            <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className="text-blue-400">Recipients:</span> {recipients.length}
+            </p>
           </div>
+          <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            Powered by{' '}
+            <a 
+              href="https://github.com/aldinokemal/go-whatsapp-web-multidevice" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-green-400 hover:underline"
+            >
+              go-whatsapp-web-multidevice
+            </a>
+          </p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-        .animate-slide-down {
-          animation: slide-down 0.3s ease-out;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(75, 85, 99, 0.2);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(107, 114, 128, 0.5);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(107, 114, 128, 0.7);
-        }
-      `}</style>
     </div>
   );
 }

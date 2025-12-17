@@ -113,18 +113,21 @@ app.use('/api/video', videoRoutes)
 app.use('/api/auth', authRoutes)
 
 // ================================================================================
-// PROXY ROUTES FOR WHATSAPP AND VOICE CALL SERVERS
-// These routes forward requests to separate WhatsApp and Voice Call services
+// PROXY ROUTES FOR GO-WHATSAPP (GOWA) API
+// These routes forward requests to the Go-WhatsApp REST API server
+// GitHub: https://github.com/aldinokemal/go-whatsapp-web-multidevice
 // ================================================================================
 
-const WHATSAPP_SERVER_URL = process.env.WHATSAPP_SERVER_URL || 'http://localhost:3001'
-const VOICE_CALL_SERVER_URL = process.env.VOICE_CALL_SERVER_URL || 'http://localhost:3002'
+const GOWA_SERVER_URL = process.env.GOWA_SERVER_URL || 'http://localhost:3000'
 
-// Helper function to proxy requests
-async function proxyRequest(targetUrl, req, res) {
+// Helper function to proxy requests with support for multipart
+async function proxyRequest(targetUrl, req, res, options = {}) {
   try {
-    const headers = {
-      'Content-Type': 'application/json',
+    const headers = {}
+    
+    // Copy content-type if exists
+    if (req.headers['content-type']) {
+      headers['Content-Type'] = req.headers['content-type']
     }
     
     const fetchOptions = {
@@ -133,9 +136,13 @@ async function proxyRequest(targetUrl, req, res) {
     }
     
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-      fetchOptions.body = JSON.stringify(req.body)
+      if (req.headers['content-type']?.includes('application/json')) {
+        fetchOptions.body = JSON.stringify(req.body)
+        headers['Content-Type'] = 'application/json'
+      }
     }
     
+    console.log(`🔄 Proxying to: ${targetUrl}`)
     const response = await fetch(targetUrl, fetchOptions)
     const data = await response.json()
     
@@ -144,38 +151,121 @@ async function proxyRequest(targetUrl, req, res) {
     console.error(`Proxy error to ${targetUrl}:`, error.message)
     res.status(503).json({
       success: false,
+      code: 'SERVICE_UNAVAILABLE',
       error: `Service unavailable: ${error.message}`,
       target: targetUrl
     })
   }
 }
 
-// WhatsApp API Proxy Routes
-app.all('/api/whatsapp/*', async (req, res) => {
-  const path = req.path.replace('/api/whatsapp', '')
-  const targetUrl = `${WHATSAPP_SERVER_URL}/api/whatsapp${path}`
-  console.log(`📱 Proxying WhatsApp request: ${req.method} ${targetUrl}`)
+// ====================
+// GOWA API Proxy Routes
+// ====================
+
+// App routes (login, logout, reconnect, devices)
+app.get('/gowa/app/login', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/app/login`
   await proxyRequest(targetUrl, req, res)
 })
 
-// Voice Call API Proxy Routes
-app.all('/api/voice-call/*', async (req, res) => {
-  const path = req.path.replace('/api/voice-call', '')
-  const targetUrl = `${VOICE_CALL_SERVER_URL}/api/voice-call${path}`
-  console.log(`📞 Proxying Voice Call request: ${req.method} ${targetUrl}`)
+app.get('/gowa/app/login-with-code', async (req, res) => {
+  const phone = req.query.phone
+  const targetUrl = `${GOWA_SERVER_URL}/app/login-with-code?phone=${phone}`
   await proxyRequest(targetUrl, req, res)
 })
 
-// Direct status endpoints for backwards compatibility
-app.get('/api/whatsapp/status', async (req, res) => {
-  const targetUrl = `${WHATSAPP_SERVER_URL}/api/whatsapp/status`
-  console.log(`📱 Proxying WhatsApp status request: ${targetUrl}`)
+app.get('/gowa/app/logout', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/app/logout`
   await proxyRequest(targetUrl, req, res)
 })
 
-app.get('/api/voice-call/config', async (req, res) => {
-  const targetUrl = `${VOICE_CALL_SERVER_URL}/api/voice-call/config`
-  console.log(`📞 Proxying Voice Call config request: ${targetUrl}`)
+app.get('/gowa/app/reconnect', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/app/reconnect`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.get('/gowa/app/devices', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/app/devices`
+  await proxyRequest(targetUrl, req, res)
+})
+
+// Send routes
+app.post('/gowa/send/message', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/message`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/image', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/image`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/file', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/file`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/video', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/video`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/audio', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/audio`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/contact', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/contact`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.post('/gowa/send/location', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/send/location`
+  await proxyRequest(targetUrl, req, res)
+})
+
+// User routes
+app.get('/gowa/user/info', async (req, res) => {
+  const phone = req.query.phone
+  const targetUrl = `${GOWA_SERVER_URL}/user/info?phone=${phone}`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.get('/gowa/user/avatar', async (req, res) => {
+  const phone = req.query.phone
+  const targetUrl = `${GOWA_SERVER_URL}/user/avatar?phone=${phone}`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.get('/gowa/user/my/contacts', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/user/my/contacts`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.get('/gowa/user/my/groups', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/user/my/groups`
+  await proxyRequest(targetUrl, req, res)
+})
+
+// Chat routes
+app.get('/gowa/chat/list', async (req, res) => {
+  const targetUrl = `${GOWA_SERVER_URL}/chat/list`
+  await proxyRequest(targetUrl, req, res)
+})
+
+app.get('/gowa/chat/messages', async (req, res) => {
+  const { phone, limit } = req.query
+  const targetUrl = `${GOWA_SERVER_URL}/chat/messages?phone=${phone}&limit=${limit || 50}`
+  await proxyRequest(targetUrl, req, res)
+})
+
+// Catch-all for other GOWA routes
+app.all('/gowa/*', async (req, res) => {
+  const path = req.path.replace('/gowa', '')
+  const queryString = req.url.includes('?') ? req.url.split('?')[1] : ''
+  const targetUrl = `${GOWA_SERVER_URL}${path}${queryString ? '?' + queryString : ''}`
+  console.log(`📱 Proxying GOWA request: ${req.method} ${targetUrl}`)
   await proxyRequest(targetUrl, req, res)
 })
 
