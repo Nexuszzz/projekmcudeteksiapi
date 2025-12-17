@@ -38,12 +38,14 @@ const TOPIC_ALL = 'lab/zaks/#'
 // ================================================================================
 const GOWA_SERVER_URL = process.env.GOWA_SERVER_URL || 'http://localhost:3000'
 const RECIPIENTS_FILE = path.join(__dirname, 'whatsapp-recipients.json')
-const GAS_DANGER_THRESHOLD = 4095  // ADC max = bahaya gas
-const NOTIFICATION_COOLDOWN = 60000  // 60 detik cooldown antara notifikasi
+const GAS_DANGER_THRESHOLD = parseInt(process.env.GAS_THRESHOLD) || 4095  // ADC max = bahaya gas
+const NOTIFICATION_COOLDOWN = parseInt(process.env.NOTIFICATION_COOLDOWN) || 60000  // 60 detik cooldown
 
 // In-memory recipients storage
 let whatsappRecipients = []
 let lastNotificationTime = 0
+let lastGasNotificationTime = 0  // Separate cooldown for gas
+let lastFireNotificationTime = 0  // Separate cooldown for fire
 let notificationStats = {
   totalSent: 0,
   lastSent: null,
@@ -55,8 +57,19 @@ function loadRecipients() {
   try {
     if (fs.existsSync(RECIPIENTS_FILE)) {
       const data = fs.readFileSync(RECIPIENTS_FILE, 'utf8')
-      whatsappRecipients = JSON.parse(data)
-      console.log(`📱 Loaded ${whatsappRecipients.length} WhatsApp recipients`)
+      const parsed = JSON.parse(data)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        whatsappRecipients = parsed
+        console.log(`📱 Loaded ${whatsappRecipients.length} WhatsApp recipients:`)
+        whatsappRecipients.forEach(r => {
+          console.log(`   - ${r.name}: ${r.phone} (${r.enabled ? '✅ enabled' : '❌ disabled'})`)
+        })
+      } else {
+        console.log('📱 No recipients in file')
+      }
+    } else {
+      console.log('📱 Recipients file not found, creating empty one')
+      fs.writeFileSync(RECIPIENTS_FILE, '[]')
     }
   } catch (error) {
     console.error('❌ Failed to load recipients:', error.message)
@@ -78,25 +91,45 @@ function saveRecipients() {
 async function sendGowaNotification(message, alertType = 'general') {
   const now = Date.now()
   
-  // Check cooldown
-  if (now - lastNotificationTime < NOTIFICATION_COOLDOWN) {
-    console.log(`⏳ Notification cooldown active (${Math.round((NOTIFICATION_COOLDOWN - (now - lastNotificationTime)) / 1000)}s remaining)`)
-    return { success: false, reason: 'cooldown' }
+  // Check cooldown per alert type
+  let lastTime = lastNotificationTime
+  if (alertType === 'gas') lastTime = lastGasNotificationTime
+  if (alertType === 'fire') lastTime = lastFireNotificationTime
+  
+  if (now - lastTime < NOTIFICATION_COOLDOWN) {
+    const remaining = Math.round((NOTIFICATION_COOLDOWN - (now - lastTime)) / 1000)
+    console.log(`⏳ ${alertType.toUpperCase()} notification cooldown active (${remaining}s remaining)`)
+    return { success: false, reason: 'cooldown', remaining }
   }
   
+  // Reload recipients from file (in case updated externally)
+  loadRecipients()
+  
   if (whatsappRecipients.length === 0) {
-    console.log('⚠️ No WhatsApp recipients configured')
+    console.log('⚠️ No WhatsApp recipients configured - cannot send notification')
     return { success: false, reason: 'no_recipients' }
   }
   
-  const results = []
-  lastNotificationTime = now
+  const enabledRecipients = whatsappRecipients.filter(r => r.enabled !== false)
+  if (enabledRecipients.length === 0) {
+    console.log('⚠️ All recipients are disabled')
+    return { success: false, reason: 'all_disabled' }
+  }
   
-  for (const recipient of whatsappRecipients) {
-    if (!recipient.enabled) continue
-    
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`📤 SENDING ${alertType.toUpperCase()} ALERT TO ${enabledRecipients.length} RECIPIENTS`)
+  console.log(`${'='.repeat(60)}`)
+  
+  const results = []
+  
+  // Update cooldown
+  if (alertType === 'gas') lastGasNotificationTime = now
+  else if (alertType === 'fire') lastFireNotificationTime = now
+  else lastNotificationTime = now
+  
+  for (const recipient of enabledRecipients) {
     // Format phone number (ensure 628xxx format)
-    let phone = recipient.phone.replace(/[^0-9]/g, '')
+    let phone = String(recipient.phone || '').replace(/[^0-9]/g, '')
     if (phone.startsWith('0')) {
       phone = '62' + phone.substring(1)
     }
@@ -104,8 +137,13 @@ async function sendGowaNotification(message, alertType = 'general') {
       phone = '62' + phone
     }
     
+    if (phone.length < 10) {
+      console.log(`⚠️ Invalid phone for ${recipient.name}: ${phone}`)
+      continue
+    }
+    
     try {
-      console.log(`📤 Sending ${alertType} alert to ${recipient.name} (${phone})...`)
+      console.log(`📤 Sending to ${recipient.name} (${phone})...`)
       
       const response = await fetch(`${GOWA_SERVER_URL}/send/message`, {
         method: 'POST',
@@ -118,13 +156,13 @@ async function sendGowaNotification(message, alertType = 'general') {
       
       const data = await response.json()
       
-      if (response.ok) {
-        console.log(`✅ Sent to ${recipient.name}: ${data.message || 'OK'}`)
+      if (response.ok && data.code === 'SUCCESS') {
+        console.log(`✅ SUCCESS: Sent to ${recipient.name}`)
         results.push({ phone, name: recipient.name, success: true })
         notificationStats.totalSent++
         notificationStats.lastSent = new Date().toISOString()
       } else {
-        console.error(`❌ Failed to send to ${recipient.name}:`, data)
+        console.error(`❌ FAILED: ${recipient.name} - ${data.message || JSON.stringify(data)}`)
         results.push({ phone, name: recipient.name, success: false, error: data })
         notificationStats.failures.push({
           phone,
@@ -133,13 +171,17 @@ async function sendGowaNotification(message, alertType = 'general') {
         })
       }
     } catch (error) {
-      console.error(`❌ Error sending to ${recipient.name}:`, error.message)
+      console.error(`❌ ERROR: ${recipient.name} - ${error.message}`)
       results.push({ phone, name: recipient.name, success: false, error: error.message })
     }
     
     // Small delay between messages to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 500))
   }
+  
+  console.log(`${'='.repeat(60)}`)
+  console.log(`📊 Results: ${results.filter(r => r.success).length}/${results.length} sent successfully`)
+  console.log(`${'='.repeat(60)}\n`)
   
   return { success: true, results }
 }
@@ -725,8 +767,88 @@ app.get('/api/notifications/stats', (req, res) => {
     success: true,
     stats: notificationStats,
     recipientCount: whatsappRecipients.length,
-    enabledCount: whatsappRecipients.filter(r => r.enabled).length,
-    cooldownRemaining: Math.max(0, NOTIFICATION_COOLDOWN - (Date.now() - lastNotificationTime))
+    enabledCount: whatsappRecipients.filter(r => r.enabled !== false).length,
+    gasThreshold: GAS_DANGER_THRESHOLD,
+    cooldowns: {
+      general: Math.max(0, NOTIFICATION_COOLDOWN - (Date.now() - lastNotificationTime)),
+      gas: Math.max(0, NOTIFICATION_COOLDOWN - (Date.now() - lastGasNotificationTime)),
+      fire: Math.max(0, NOTIFICATION_COOLDOWN - (Date.now() - lastFireNotificationTime))
+    }
+  })
+})
+
+// Get/Set gas threshold
+app.get('/api/config/gas-threshold', (req, res) => {
+  res.json({
+    success: true,
+    threshold: GAS_DANGER_THRESHOLD,
+    description: 'Gas ADC value threshold for triggering alert (0-4095)'
+  })
+})
+
+// Simulate gas alert for testing
+app.post('/api/test/gas-alert', async (req, res) => {
+  const { gasValue = 4095 } = req.body
+  
+  console.log(`\n🧪 SIMULATING GAS ALERT with value: ${gasValue}`)
+  
+  // Create fake telemetry payload
+  const fakePayload = JSON.stringify({
+    id: 'TEST-DEVICE',
+    gasA: gasValue,
+    gasD: true,
+    alarm: true,
+    t: 25.0,
+    h: 60.0
+  })
+  
+  await processAlertEvent('lab/zaks/log', fakePayload)
+  
+  res.json({
+    success: true,
+    message: `Gas alert simulated with value ${gasValue}`,
+    threshold: GAS_DANGER_THRESHOLD,
+    wouldTrigger: gasValue >= GAS_DANGER_THRESHOLD
+  })
+})
+
+// Simulate fire alert for testing
+app.post('/api/test/fire-alert', async (req, res) => {
+  console.log(`\n🧪 SIMULATING FIRE ALERT`)
+  
+  // Create fake event payload
+  const fakePayload = JSON.stringify({
+    event: 'flame_on',
+    id: 'TEST-DEVICE',
+    flame: true
+  })
+  
+  await processAlertEvent('lab/zaks/event', fakePayload)
+  
+  res.json({
+    success: true,
+    message: 'Fire alert simulated'
+  })
+})
+
+// Reload recipients from file
+app.post('/api/recipients/reload', (req, res) => {
+  loadRecipients()
+  res.json({
+    success: true,
+    count: whatsappRecipients.length,
+    recipients: whatsappRecipients
+  })
+})
+
+// Reset cooldowns (for testing)
+app.post('/api/notifications/reset-cooldown', (req, res) => {
+  lastNotificationTime = 0
+  lastGasNotificationTime = 0
+  lastFireNotificationTime = 0
+  res.json({
+    success: true,
+    message: 'All cooldowns reset'
   })
 })
 
@@ -1162,15 +1284,36 @@ mqttClient.on('message', (topic, payload) => {
     try {
       const telemetryData = JSON.parse(payloadString)
       
-      // Check for dangerous gas level (4095 = ADC max = saturated/dangerous)
-      if (telemetryData.gasA !== undefined && telemetryData.gasA >= GAS_DANGER_THRESHOLD) {
-        console.log(`💨 DANGEROUS GAS LEVEL DETECTED! gasA=${telemetryData.gasA} (threshold=${GAS_DANGER_THRESHOLD})`)
+      // Log current gas level for debugging
+      if (telemetryData.gasA !== undefined) {
+        const gasLevel = telemetryData.gasA
+        const threshold = GAS_DANGER_THRESHOLD
+        const percent = ((gasLevel / 4095) * 100).toFixed(1)
+        
+        // Only log every 10th reading or when near threshold
+        if (gasLevel >= threshold * 0.8) {
+          console.log(`⚠️ GAS LEVEL HIGH: ${gasLevel}/4095 (${percent}%) - Threshold: ${threshold}`)
+        }
+        
+        // Check for dangerous gas level
+        if (gasLevel >= threshold) {
+          console.log(`\n🚨🚨🚨 DANGEROUS GAS LEVEL DETECTED! 🚨🚨🚨`)
+          console.log(`   gasA = ${gasLevel} (threshold = ${threshold})`)
+          console.log(`   Triggering WhatsApp notification...`)
+          processAlertEvent(topic, payloadString)
+        }
+      }
+      
+      // Check for flame detection from sensor
+      if (telemetryData.flame === true) {
+        console.log(`\n🔥🔥🔥 FLAME DETECTED FROM SENSOR! 🔥🔥🔥`)
+        console.log(`   Triggering WhatsApp notification...`)
         processAlertEvent(topic, payloadString)
       }
       
       // Check for alarm flag
       if (telemetryData.alarm === true || telemetryData.alarm === 1) {
-        console.log('🚨 ALARM FLAG DETECTED in telemetry!')
+        console.log(`\n🚨 ALARM FLAG DETECTED in telemetry!`)
         processAlertEvent(topic, payloadString)
       }
     } catch (e) {
