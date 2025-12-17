@@ -399,7 +399,7 @@ http://10.148.218.219:81/stream
 **Solution**:
 ```bash
 # Test MQTT connection
-mosquitto_sub -h 3.27.0.139 -t "lab/zaks/#" -u zaks -P enggangodinginmcu
+mosquitto_sub -h 3.27.11.106 -t "lab/zaks/#" -u zaks -P enggangodinginmcu
 ```
 
 ### 4. "Gallery tidak update"

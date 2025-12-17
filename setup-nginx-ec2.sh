@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# ⚙️ Setup Nginx Reverse Proxy on EC2 (3.27.0.139)
+# ⚙️ Setup Nginx Reverse Proxy on EC2 (3.27.11.106)
 # ============================================================================
 
 set -e  # Exit on error
@@ -28,7 +28,7 @@ upstream backend {
 
 server {
     listen 80;
-    server_name 3.27.0.139;
+    server_name 3.27.11.106;
     
     # Security headers
     add_header X-Content-Type-Options "nosniff" always;
@@ -165,7 +165,7 @@ echo ""
 echo "📝 Testing Commands:"
 echo "  Health check: curl http://localhost/health"
 echo "  API test: curl http://localhost/api/auth/health"
-echo "  External: curl http://3.27.0.139/health"
+echo "  External: curl http://3.27.11.106/health"
 echo ""
 echo "📝 Nginx Commands:"
 echo "  Test config: sudo nginx -t"
@@ -173,6 +173,6 @@ echo "  Reload: sudo systemctl reload nginx"
 echo "  Restart: sudo systemctl restart nginx"
 echo "  Logs: sudo tail -f /var/log/nginx/rtsp-api-error.log"
 echo ""
-echo "🔗 Public API: http://3.27.0.139/api"
-echo "🔗 WebSocket: ws://3.27.0.139/ws"
+echo "🔗 Public API: http://3.27.11.106/api"
+echo "🔗 WebSocket: ws://3.27.11.106/ws"
 echo ""

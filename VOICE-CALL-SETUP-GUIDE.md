@@ -62,7 +62,7 @@ Create `.env` file:
 VOICE_CALL_PORT=3002
 
 # MQTT Configuration
-MQTT_HOST=3.27.0.139
+MQTT_HOST=3.27.11.106
 MQTT_PORT=1883
 MQTT_USER=zaks
 MQTT_PASSWORD=enggangodinginmcu
@@ -361,7 +361,7 @@ Content-Type: application/json
 
 2. Verify MQTT credentials in `.env`:
    ```
-   MQTT_HOST=3.27.0.139
+   MQTT_HOST=3.27.11.106
    MQTT_USER=zaks
    MQTT_PASSWORD=enggangodinginmcu
    ```

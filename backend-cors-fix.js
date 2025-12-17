@@ -15,8 +15,8 @@ const corsOptions = {
     'https://rtsp-main.vercel.app',
     'https://rtsp-main-krj3w64cm-nexuszzzs-projects.vercel.app',
     /\.vercel\.app$/,  // Allow all Vercel domains
-    'http://3.27.0.139:3000',
-    'http://3.27.0.139:5173',
+    'http://3.27.11.106:3000',
+    'http://3.27.11.106:5173',
     /^https?:\/\/.*\.vercel\.app$/  // Allow all Vercel subdomains
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

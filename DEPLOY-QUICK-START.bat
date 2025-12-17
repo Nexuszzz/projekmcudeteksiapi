@@ -13,7 +13,7 @@ echo ┌────────────────────────
 echo │                   DEPLOYMENT INFORMATION                          │
 echo └───────────────────────────────────────────────────────────────────┘
 echo.
-echo   🌐 Target EC2 IP: 3.27.0.139
+echo   🌐 Target EC2 IP: 3.27.11.106
 echo   👤 Username: ubuntu
 echo   🔑 Auth: .pem key file
 echo   📦 Repository: github.com/Nexuszzz/sudahtapibelum
@@ -65,12 +65,12 @@ echo ╚════════════════════════
 echo.
 echo Opening files:
 echo   • 🎉-DEPLOYMENT-READY.md
-echo   • DEPLOY-TO-3.27.0.139.md
+echo   • DEPLOY-TO-3.27.11.106.md
 echo.
 timeout /t 1 >nul
 start notepad.exe "%~dp0🎉-DEPLOYMENT-READY.md"
 timeout /t 1 >nul
-start notepad.exe "%~dp0DEPLOY-TO-3.27.0.139.md"
+start notepad.exe "%~dp0DEPLOY-TO-3.27.11.106.md"
 goto END
 
 :PUTTY
@@ -81,17 +81,17 @@ echo ║                   🌐 CONNECTING TO EC2                            ║
 echo ╚═══════════════════════════════════════════════════════════════════╝
 echo.
 echo Connection Details:
-echo   • Host: 3.27.0.139
+echo   • Host: 3.27.11.106
 echo   • Port: 22
 echo   • User: ubuntu
 echo.
 echo Opening PuTTY...
 echo.
 if exist "C:\Program Files\PuTTY\putty.exe" (
-    start "" "C:\Program Files\PuTTY\putty.exe" -ssh ubuntu@3.27.0.139
+    start "" "C:\Program Files\PuTTY\putty.exe" -ssh ubuntu@3.27.11.106
     echo ✅ PuTTY launched!
 ) else if exist "C:\Program Files (x86)\PuTTY\putty.exe" (
-    start "" "C:\Program Files (x86)\PuTTY\putty.exe" -ssh ubuntu@3.27.0.139
+    start "" "C:\Program Files (x86)\PuTTY\putty.exe" -ssh ubuntu@3.27.11.106
     echo ✅ PuTTY launched!
 ) else (
     echo ❌ PuTTY not found!
@@ -111,7 +111,7 @@ echo ╚════════════════════════
 echo.
 echo File Transfer Details:
 echo   • Protocol: SFTP
-echo   • Host: 3.27.0.139
+echo   • Host: 3.27.11.106
 echo   • Port: 22
 echo   • User: ubuntu
 echo   • Remote dir: /home/ubuntu/sudahtapibelum
@@ -140,10 +140,10 @@ echo ╔════════════════════════
 echo ║                   🧪 TESTING DEPLOYMENT                           ║
 echo ╚═══════════════════════════════════════════════════════════════════╝
 echo.
-echo Opening website: http://3.27.0.139
+echo Opening website: http://3.27.11.106
 echo.
 timeout /t 1 >nul
-start http://3.27.0.139
+start http://3.27.11.106
 echo.
 echo ┌───────────────────────────────────────────────────────────────────┐
 echo │                      LOGIN CREDENTIALS                            │
@@ -183,7 +183,7 @@ echo │                      QUICK COMMANDS                               │
 echo └───────────────────────────────────────────────────────────────────┘
 echo.
 echo   Connect to EC2:
-echo     ssh -i "key.pem" ubuntu@3.27.0.139
+echo     ssh -i "key.pem" ubuntu@3.27.11.106
 echo.
 echo   Deploy on EC2:
 echo     cd /home/ubuntu/sudahtapibelum
@@ -194,7 +194,7 @@ echo   Check services:
 echo     pm2 status
 echo     pm2 logs
 echo.
-echo   Website: http://3.27.0.139
+echo   Website: http://3.27.11.106
 echo.
 pause
 cls

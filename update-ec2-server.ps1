@@ -14,7 +14,7 @@ Write-Host ""
 # Test current EC2 status
 Write-Host "Testing current EC2 server..."
 try {
-    $response = Invoke-RestMethod -Uri "http://3.27.0.139:8080/health" -Method Get -TimeoutSec 10
+    $response = Invoke-RestMethod -Uri "http://3.27.11.106:8080/health" -Method Get -TimeoutSec 10
     Write-Host "EC2 server is responding:"
     $response | ConvertTo-Json
 } catch {

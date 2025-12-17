@@ -156,7 +156,7 @@ PROXY_SERVER_URL = "http://localhost:8080"
 
 # MQTT Configuration
 MQTT_ENABLED = MQTT_AVAILABLE
-MQTT_BROKER = "3.27.0.139"
+MQTT_BROKER = "3.27.11.106"
 MQTT_PORT = 1883
 MQTT_USER = "zaks"
 MQTT_PASSWORD = "enggangodinginmcu"

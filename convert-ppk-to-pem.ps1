@@ -43,7 +43,7 @@ if (Test-Path $puttygenPath) {
 
 # EC2 Fire Detection Server
 Host ec2-fire-detection
-    HostName 3.27.0.139
+    HostName 3.27.11.106
     User ubuntu
     IdentityFile $pemFile
     StrictHostKeyChecking no

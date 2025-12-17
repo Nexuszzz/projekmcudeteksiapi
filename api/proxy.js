@@ -16,7 +16,7 @@ export default async function handler(request, response) {
     const endpoint = searchParams.get('endpoint') || '/health';
     
     // EC2 backend URL
-    const backendUrl = `http://3.27.0.139:8080${endpoint}`;
+    const backendUrl = `http://3.27.11.106:8080${endpoint}`;
     
     console.log(`Proxying request to: ${backendUrl}`);
     
@@ -50,7 +50,7 @@ export default async function handler(request, response) {
     return response.status(500).json({
       error: 'Proxy failed',
       message: error.message,
-      backend: '3.27.0.139:8080'
+      backend: '3.27.11.106:8080'
     });
   }
 }

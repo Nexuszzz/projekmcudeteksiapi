@@ -27,7 +27,7 @@ const isDomainAccess = () => {
 };
 
 // Dynamic API Domain based on current access
-const getApiDomain = () => isDomainAccess() ? 'api.latom.flx.web.id' : '3.27.0.139:8080';
+const getApiDomain = () => isDomainAccess() ? 'api.latom.flx.web.id' : '3.27.11.106:8080';
 const useHttps = () => isDomainAccess();
 
 // GOWA (Go-WhatsApp) Configuration

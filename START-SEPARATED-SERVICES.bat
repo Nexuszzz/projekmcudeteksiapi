@@ -92,7 +92,7 @@ echo    Port 3000:  GOWA Server (Go-WhatsApp REST API)
 echo    Port 8080:  Proxy Server (Backend + MQTT + /gowa routes)
 echo    Port 5173:  Dashboard (Frontend)
 echo.
-echo    MQTT Broker: 3.27.0.139:1883 (user: zaks)
+echo    MQTT Broker: 3.27.11.106:1883 (user: zaks)
 echo.
 echo ================================================================================
 echo Verifying Services...

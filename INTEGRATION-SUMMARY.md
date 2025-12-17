@@ -76,7 +76,7 @@ Menambahkan section baru untuk Fire Detection Gallery:
                    ▼
           ┌────────────────┐
           │  MQTT Broker   │
-          │ 3.27.0.139  │
+          │ 3.27.11.106  │
           └────────┬───────┘
                    │
     ┌──────────────┴──────────────┐

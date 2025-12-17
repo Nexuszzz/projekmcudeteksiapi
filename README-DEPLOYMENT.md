@@ -1,4 +1,4 @@
-# 🔥 CARA HOSTING KE EC2 IP: 3.27.0.139
+# 🔥 CARA HOSTING KE EC2 IP: 3.27.11.106
 
 ## ⚡ MULAI DARI SINI!
 
@@ -37,7 +37,7 @@ Ini akan membuka menu dengan opsi:
 
 **Opsi A: Via WinSCP (Recommended)**
 1. Buka WinSCP
-2. Host: `3.27.0.139`, User: `ubuntu`
+2. Host: `3.27.11.106`, User: `ubuntu`
 3. Auth: Pilih file .pem
 4. Login
 5. Upload folder ke `/home/ubuntu/sudahtapibelum`
@@ -68,7 +68,7 @@ chmod +x deploy-to-ec2.sh
 
 Setelah deploy selesai:
 
-**URL:** http://3.27.0.139
+**URL:** http://3.27.11.106
 
 **Login:**
 - Username: `admin`
@@ -83,7 +83,7 @@ Setelah deploy selesai:
 | **DEPLOY-QUICK-START.bat** | ⭐ Menu utama deployment |
 | **START-DEPLOYMENT.bat** | Menu interaktif lengkap |
 | **🎉-DEPLOYMENT-READY.md** | Panduan deployment lengkap |
-| **DEPLOY-TO-3.27.0.139.md** | Guide detail untuk IP ini |
+| **DEPLOY-TO-3.27.11.106.md** | Guide detail untuk IP ini |
 | **deploy-to-ec2.sh** | Script auto deployment (jalankan di EC2) |
 | **ecosystem.config.json** | PM2 configuration |
 
@@ -101,7 +101,7 @@ Setelah deploy selesai:
 
 **Cara setting:**
 1. AWS Console → EC2 → Instances
-2. Pilih instance `3.27.0.139`
+2. Pilih instance `3.27.11.106`
 3. Tab Security → Click Security Group
 4. Edit inbound rules → Add rules
 5. Save
@@ -173,7 +173,7 @@ pm2 restart all
 - [ ] Security Group configured
 - [ ] Files uploaded to EC2
 - [ ] `deploy-to-ec2.sh` executed
-- [ ] Website accessible at http://3.27.0.139
+- [ ] Website accessible at http://3.27.11.106
 - [ ] Login works (admin/admin123)
 - [ ] Password changed
 - [ ] ESP32-CAM IP updated
@@ -184,7 +184,7 @@ pm2 restart all
 
 ```bash
 # Connect
-ssh -i "key.pem" ubuntu@3.27.0.139
+ssh -i "key.pem" ubuntu@3.27.11.106
 
 # Deploy
 cd /home/ubuntu/sudahtapibelum && chmod +x deploy-to-ec2.sh && ./deploy-to-ec2.sh
@@ -202,7 +202,7 @@ pm2 restart all
 
 ## 🎉 Selesai!
 
-Website akan live di: **http://3.27.0.139**
+Website akan live di: **http://3.27.11.106**
 
 **Features:**
 - 🔥 Fire Detection dengan YOLO + Gemini AI
@@ -217,6 +217,6 @@ Website akan live di: **http://3.27.0.139**
 
 Baca file lengkap:
 - `🎉-DEPLOYMENT-READY.md` - Panduan lengkap dengan troubleshooting
-- `DEPLOY-TO-3.27.0.139.md` - Guide detail untuk IP ini
+- `DEPLOY-TO-3.27.11.106.md` - Guide detail untuk IP ini
 
 **Happy Deployment! 🚀🔥**

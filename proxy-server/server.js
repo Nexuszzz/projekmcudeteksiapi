@@ -296,10 +296,10 @@ const corsOptions = {
     'https://rtsp-main.vercel.app',
     'https://rtsp-main-krj3w64cm-nexuszzzs-projects.vercel.app',
     /.*\.vercel\.app$/,  // Allow all Vercel domains
-    'http://3.27.0.139:3000',
-    'http://3.27.0.139:5173',
-    'http://3.27.0.139:8080',
-    'http://3.27.0.139',
+    'http://3.27.11.106:3000',
+    'http://3.27.11.106:5173',
+    'http://3.27.11.106:8080',
+    'http://3.27.11.106',
     'https://latom.flx.web.id',
     'https://api.latom.flx.web.id',
     /.*\.flx\.web\.id$/  // Allow all flx.web.id subdomains

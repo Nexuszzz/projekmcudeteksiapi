@@ -343,7 +343,7 @@ d:\IotCobwengdev-backup-20251103-203857\voice-call-server\emergency-call-numbers
 
 2. **Verify MQTT credentials** in `.env`:
    ```
-   MQTT_HOST=3.27.0.139
+   MQTT_HOST=3.27.11.106
    MQTT_USER=zaks
    MQTT_PASSWORD=enggangodinginmcu
    ```
@@ -418,7 +418,7 @@ d:\IotCobwengdev-backup-20251103-203857\voice-call-server\emergency-call-numbers
 
 3. **MQTT monitoring:**
    ```bash
-   mosquitto_sub -h 3.27.0.139 -t "lab/zaks/#" -u zaks -P password
+   mosquitto_sub -h 3.27.11.106 -t "lab/zaks/#" -u zaks -P password
    ```
 
 ### Backup Strategy
@@ -539,7 +539,7 @@ cd voice-call-server
 TEST-VOICE-CALL.bat
 
 # View MQTT messages
-mosquitto_sub -h 3.27.0.139 -t "lab/zaks/#" -u zaks -P password
+mosquitto_sub -h 3.27.11.106 -t "lab/zaks/#" -u zaks -P password
 
 # Test complete system
 TEST-COMPLETE-FIRE-SYSTEM.bat

@@ -644,7 +644,7 @@ Jika masih ada masalah:
 
 4. **Test MQTT directly**:
    ```bash
-   mosquitto_sub -h 3.27.0.139 -p 1883 \
+   mosquitto_sub -h 3.27.11.106 -p 1883 \
      -u zaks -P enggangodinginmcu \
      -t "lab/zaks/#" -v
    ```

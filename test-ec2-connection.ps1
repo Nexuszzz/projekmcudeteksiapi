@@ -6,7 +6,7 @@ Write-Host " EC2 Connection Setup & Test" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-$EC2IP = "3.27.0.139"
+$EC2IP = "3.27.11.106"
 $EC2User = "ubuntu"
 $KeyPath = "C:\Users\NAUFAL\Downloads"
 
@@ -127,7 +127,7 @@ elseif ($choice -eq "3") {
     Write-Host "Manual SSH Connection Commands:" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "If you have .pem file:" -ForegroundColor Cyan
-    Write-Host 'ssh -i "C:\Users\NAUFAL\Downloads\sismod.pem" ubuntu@3.27.0.139' -ForegroundColor White
+    Write-Host 'ssh -i "C:\Users\NAUFAL\Downloads\sismod.pem" ubuntu@3.27.11.106' -ForegroundColor White
     Write-Host ""
     Write-Host "Deployment commands:" -ForegroundColor Cyan
     Write-Host "cd ~" -ForegroundColor White

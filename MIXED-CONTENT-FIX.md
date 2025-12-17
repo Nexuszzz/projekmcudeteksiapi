@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 
 #### Option 3: Use Direct IP Access (Testing)
 For testing only, you can access:
-`http://3.27.0.139:8080` directly (not through Vercel)
+`http://3.27.11.106:8080` directly (not through Vercel)
 
 ### 🚀 Status Update
 ✅ **Completed:**
@@ -47,11 +47,11 @@ For testing only, you can access:
 ### 🧪 Testing Commands
 ```bash
 # Test EC2 directly
-curl -v http://3.27.0.139:8080/health
+curl -v http://3.27.11.106:8080/health
 
 # Test with CORS headers
 curl -H "Origin: https://rtsp-main-csy6kw6uc-nexuszzzs-projects.vercel.app" \
      -H "Access-Control-Request-Method: GET" \
      -H "Access-Control-Request-Headers: X-Requested-With" \
-     -X OPTIONS http://3.27.0.139:8080/health
+     -X OPTIONS http://3.27.11.106:8080/health
 ```

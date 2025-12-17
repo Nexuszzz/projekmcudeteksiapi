@@ -11,7 +11,7 @@ echo ║                                                                ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 echo.
-echo 📦 FILES CREATED FOR DEPLOYMENT TO EC2 IP: 3.27.0.139
+echo 📦 FILES CREATED FOR DEPLOYMENT TO EC2 IP: 3.27.11.106
 echo ════════════════════════════════════════════════════════════════
 echo.
 echo.
@@ -34,7 +34,7 @@ echo.
 echo    📄 🎯-MULAI-DARI-SINI.txt
 echo    📄 README-DEPLOYMENT.md
 echo    📄 🎉-DEPLOYMENT-READY.md
-echo    📄 DEPLOY-TO-3.27.0.139.md
+echo    📄 DEPLOY-TO-3.27.11.106.md
 echo    📄 📦-FILE-DEPLOYMENT-GUIDE.md
 echo    📄 🚀-DEPLOY-EC2-GUIDE.md
 echo.
@@ -96,7 +96,7 @@ echo.
 echo STEP 5: Test Website
 echo ════════════════════════════════════════════════════════════════
 echo.
-echo    URL: http://3.27.0.139
+echo    URL: http://3.27.11.106
 echo    Login: admin / admin123
 echo.
 echo.
@@ -113,7 +113,7 @@ echo ⚠️  IMPORTANT: Configure Security Group BEFORE deployment!
 echo ════════════════════════════════════════════════════════════════
 echo.
 echo    1. AWS Console → EC2 → Instances
-echo    2. Select instance: 3.27.0.139
+echo    2. Select instance: 3.27.11.106
 echo    3. Security tab → Edit inbound rules
 echo    4. Add these rules:
 echo.
@@ -159,7 +159,7 @@ echo.
 echo TESTING:
 echo ════════════════════════════════════════════════════════════════
 echo.
-echo    [ ] Website accessible (http://3.27.0.139)
+echo    [ ] Website accessible (http://3.27.11.106)
 echo    [ ] Login works (admin/admin123)
 echo    [ ] Dashboard loads correctly
 echo    [ ] Real-time data updates
@@ -191,7 +191,7 @@ echo    2. Run: DEPLOY-QUICK-START.bat
 echo.
 echo    3. Follow the interactive menus
 echo.
-echo    4. Deploy to: http://3.27.0.139
+echo    4. Deploy to: http://3.27.11.106
 echo.
 echo.
 echo 🎯 RESULT:
@@ -206,7 +206,7 @@ echo.
 echo.
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo.
-echo    🌐 Website: http://3.27.0.139
+echo    🌐 Website: http://3.27.11.106
 echo    🔑 Login: admin / admin123
 echo.
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

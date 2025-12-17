@@ -8,7 +8,7 @@ Saya sudah setup semuanya untuk deploy ke EC2 menggunakan VS Code Remote SSH!
 
 1. **Extension Remote-SSH** - Sudah diinstall
 2. **SSH Config File** - Sudah dibuat di `C:\Users\NAUFAL\.ssh\config`
-3. **Connection Profile** - `ec2-fire-detection` untuk IP 3.27.0.139
+3. **Connection Profile** - `ec2-fire-detection` untuk IP 3.27.11.106
 
 ---
 
@@ -73,7 +73,7 @@ C:\Users\NAUFAL\.ssh\config
 **Contoh:**
 ```
 Host ec2-fire-detection
-    HostName 3.27.0.139
+    HostName 3.27.11.106
     User ubuntu
     IdentityFile C:\Users\NAUFAL\Downloads\zakaaws.ppk
     StrictHostKeyChecking no
@@ -151,7 +151,7 @@ pm2 logs
 
 Setelah semua services running:
 
-**URL:** http://3.27.0.139
+**URL:** http://3.27.11.106
 
 **Login:**
 - Username: `admin`
@@ -162,7 +162,7 @@ Setelah semua services running:
 ## 🎯 Next Steps Setelah Deploy
 
 1. **Test Website**
-   - Buka http://3.27.0.139
+   - Buka http://3.27.11.106
    - Login dengan admin/admin123
    - Check dashboard
 
@@ -171,7 +171,7 @@ Setelah semua services running:
 
 3. **Update ESP32-CAM**
    ```cpp
-   const char* serverUrl = "http://3.27.0.139/api/esp32/capture";
+   const char* serverUrl = "http://3.27.11.106/api/esp32/capture";
    ```
 
 4. **Monitor Services**

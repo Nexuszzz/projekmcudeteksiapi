@@ -1,6 +1,6 @@
 // Test API connection to EC2 from browser
 const testAPI = async () => {
-    const EC2_HOST = '3.27.0.139';
+    const EC2_HOST = '3.27.11.106';
     const testUrls = [
         `http://${EC2_HOST}`,
         `http://${EC2_HOST}:8080`,
@@ -36,7 +36,7 @@ const testAPI = async () => {
 testAPI();
 
 // Also test direct fetch to specific endpoint
-fetch('http://3.27.0.139:8080/api/status')
+fetch('http://3.27.11.106:8080/api/status')
     .then(response => response.json())
     .then(data => console.log('Direct test result:', data))
     .catch(error => console.log('Direct test error:', error));

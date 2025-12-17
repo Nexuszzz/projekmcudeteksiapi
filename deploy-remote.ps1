@@ -7,7 +7,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Configuration
-$EC2IP = "3.27.0.139"
+$EC2IP = "3.27.11.106"
 $EC2User = "ubuntu"
 $RepoURL = "https://github.com/Nexuszzz/sudahtapibelum.git"
 

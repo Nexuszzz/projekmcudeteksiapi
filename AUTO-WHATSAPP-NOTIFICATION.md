@@ -225,7 +225,7 @@ src/components/
 ```env
 # proxy-server/.env
 GOWA_SERVER_URL=http://localhost:3000
-MQTT_HOST=3.27.0.139
+MQTT_HOST=3.27.11.106
 MQTT_PORT=1883
 MQTT_USERNAME=zaks
 MQTT_PASSWORD=enggangodinginmcu

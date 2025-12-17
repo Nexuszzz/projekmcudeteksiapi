@@ -16,7 +16,7 @@ echo ✅ SSH config sudah dibuat di: %USERPROFILE%\.ssh\config
 echo.
 echo Target Server:
 echo   Host: ec2-fire-detection
-echo   IP: 3.27.0.139
+echo   IP: 3.27.11.106
 echo   User: ubuntu
 echo.
 echo ════════════════════════════════════════════════════════════════

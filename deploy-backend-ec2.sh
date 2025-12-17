@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# 🚀 Deploy Backend Express.js to EC2 (3.27.0.139)
+# 🚀 Deploy Backend Express.js to EC2 (3.27.11.106)
 # ============================================================================
 
 set -e  # Exit on error
@@ -68,7 +68,7 @@ PORT=8080
 NODE_ENV=production
 
 # MQTT Configuration
-MQTT_HOST=3.27.0.139
+MQTT_HOST=3.27.11.106
 MQTT_PORT=1883
 MQTT_USERNAME=zaks
 MQTT_PASSWORD=enggangodinginmcu
@@ -140,11 +140,11 @@ echo "✅ Backend Deployment Complete!"
 echo "============================================"
 echo ""
 echo "📝 Next Steps:"
-echo "1. Test API: curl http://3.27.0.139:8080/health"
+echo "1. Test API: curl http://3.27.11.106:8080/health"
 echo "2. Check logs: pm2 logs proxy-server"
 echo "3. Monitor: pm2 monit"
 echo ""
-echo "🔗 Backend URL: http://3.27.0.139:8080"
-echo "🔗 API Endpoint: http://3.27.0.139:8080/api"
-echo "🔗 WebSocket: ws://3.27.0.139:8080/ws"
+echo "🔗 Backend URL: http://3.27.11.106:8080"
+echo "🔗 API Endpoint: http://3.27.11.106:8080/api"
+echo "🔗 WebSocket: ws://3.27.11.106:8080/ws"
 echo ""

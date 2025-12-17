@@ -166,7 +166,7 @@ ESP32 Device
     ↓
     ↓ (MQTT TCP - port 1883)
     ↓
-MQTT Broker (3.27.0.139:1883)
+MQTT Broker (3.27.11.106:1883)
     ↓
     ↓ (Subscribe: lab/zaks/#)
     ↓
@@ -253,7 +253,7 @@ console.log('Latest Data:', store.data[store.data.length - 1])
 
 ```bash
 # Subscribe to all topics from terminal:
-mosquitto_sub -h 3.27.0.139 -p 1883 -u zaks -P enggangodinginmcu -t "lab/zaks/#" -v
+mosquitto_sub -h 3.27.11.106 -p 1883 -u zaks -P enggangodinginmcu -t "lab/zaks/#" -v
 ```
 
 ---
@@ -469,7 +469,7 @@ Jika masih ada masalah:
 
 5. **Test MQTT directly**:
    ```bash
-   mosquitto_sub -h 3.27.0.139 -p 1883 -u zaks -P enggangodinginmcu -t "lab/zaks/#"
+   mosquitto_sub -h 3.27.11.106 -p 1883 -u zaks -P enggangodinginmcu -t "lab/zaks/#"
    ```
 
 **Semua sistem sekarang berfungsi dengan sempurna!** 🎉✅

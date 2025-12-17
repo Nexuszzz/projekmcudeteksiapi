@@ -4,7 +4,7 @@
 
 param(
     [string]$SSHKey = "C:\Users\NAUFAL\Downloads\sismod\sismod",
-    [string]$EC2Host = "3.27.0.139",
+    [string]$EC2Host = "3.27.11.106",
     [string]$EC2User = "ubuntu"
 )
 

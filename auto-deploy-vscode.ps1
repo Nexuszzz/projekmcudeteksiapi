@@ -5,7 +5,7 @@
 
 param(
     [string]$KeyFile = "C:\Users\NAUFAL\Downloads\sismod.ppk",
-    [string]$EC2IP = "3.27.0.139",
+    [string]$EC2IP = "3.27.11.106",
     [string]$EC2User = "ubuntu"
 )
 

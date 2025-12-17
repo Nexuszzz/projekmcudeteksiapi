@@ -1,11 +1,11 @@
 # ============================================================================
 # 🚀 Complete EC2 Deployment Script for Windows (PowerShell)
 # ============================================================================
-# This script automates the entire deployment process to EC2 3.27.0.139
+# This script automates the entire deployment process to EC2 3.27.11.106
 
 param(
     [string]$SSHKey = "C:\Users\fahri\Downloads\sismod",
-    [string]$EC2Host = "3.27.0.139",
+    [string]$EC2Host = "3.27.11.106",
     [string]$EC2User = "ubuntu"
 )
 

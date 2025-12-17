@@ -54,8 +54,8 @@
      - Checklist lengkap
    - **Baca:** Untuk panduan detail
 
-3. **DEPLOY-TO-3.27.0.139.md** ⭐⭐
-   - **Fungsi:** Panduan spesifik untuk IP 3.27.0.139
+3. **DEPLOY-TO-3.27.11.106.md** ⭐⭐
+   - **Fungsi:** Panduan spesifik untuk IP 3.27.11.106
    - **Isi:**
      - Quick start 5 langkah
      - AWS Security Group setup
@@ -163,7 +163,7 @@ cd sudahtapibelum
 **Opsi B: WinSCP**
 ```
 1. DEPLOY-QUICK-START.bat → [4] Open WinSCP
-2. Login: 3.27.0.139, ubuntu, .pem key
+2. Login: 3.27.11.106, ubuntu, .pem key
 3. Upload folder ke: /home/ubuntu/sudahtapibelum
 ```
 
@@ -179,7 +179,7 @@ chmod +x deploy-to-ec2.sh
 
 ```
 1. DEPLOY-QUICK-START.bat → [5] Test Deployment
-2. Atau buka browser: http://3.27.0.139
+2. Atau buka browser: http://3.27.11.106
 3. Login: admin / admin123
 ```
 
@@ -347,7 +347,7 @@ pip3 list | grep -E "opencv|ultralytics|google"
 - [ ] Firewall configured
 
 ### Testing
-- [ ] Website accessible (http://3.27.0.139)
+- [ ] Website accessible (http://3.27.11.106)
 - [ ] Login works (admin/admin123)
 - [ ] Dashboard loads
 - [ ] Navigation works
@@ -368,7 +368,7 @@ pip3 list | grep -E "opencv|ultralytics|google"
 
 ### Connect to EC2
 ```bash
-ssh -i "path/to/key.pem" ubuntu@3.27.0.139
+ssh -i "path/to/key.pem" ubuntu@3.27.11.106
 ```
 
 ### One-line Deploy
@@ -399,7 +399,7 @@ pm2 restart all && sudo systemctl restart nginx
 2. ⭐ **🎉-DEPLOYMENT-READY.md** (complete guide)
 
 **Result:**
-- Website live di: http://3.27.0.139
+- Website live di: http://3.27.11.106
 - Login: admin/admin123
 - Services: PM2 manages all
 - Web server: Nginx

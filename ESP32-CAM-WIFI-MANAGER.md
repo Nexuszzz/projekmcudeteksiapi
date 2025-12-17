@@ -98,8 +98,8 @@ python fire_detect_auto_ip.py
 
 ✅ Model: D:/zekk/zakaiot/fire_yolov8s_ultra_best.pt
 
-[MQTT] Connecting to 3.27.0.139:1883...
-✅ MQTT Connected to 3.27.0.139
+[MQTT] Connecting to 3.27.11.106:1883...
+✅ MQTT Connected to 3.27.11.106
 📡 Subscribed to: lab/zaks/esp32cam/ip
 ⏳ Waiting for ESP32-CAM IP broadcast...
 
@@ -160,7 +160,7 @@ Kirim command ke ESP32-CAM via MQTT topic `lab/zaks/esp32cam/cmd`:
 
 **Contoh via MQTT.fx atau mosquitto_pub:**
 ```bash
-mosquitto_pub -h 3.27.0.139 -u zaks -P enggangodinginmcu -t "lab/zaks/esp32cam/cmd" -m "FLASH_ON"
+mosquitto_pub -h 3.27.11.106 -u zaks -P enggangodinginmcu -t "lab/zaks/esp32cam/cmd" -m "FLASH_ON"
 ```
 
 ---
@@ -212,7 +212,7 @@ mosquitto_pub -h 3.27.0.139 -u zaks -P enggangodinginmcu -t "lab/zaks/esp32cam/c
 2. Cek MQTT broker running: `mosquitto -v`
 3. Test subscribe manual:
    ```bash
-   mosquitto_sub -h 3.27.0.139 -u zaks -P enggangodinginmcu -t "lab/zaks/esp32cam/ip"
+   mosquitto_sub -h 3.27.11.106 -u zaks -P enggangodinginmcu -t "lab/zaks/esp32cam/ip"
    ```
 
 ### Stream tidak bisa dibuka

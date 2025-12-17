@@ -17,7 +17,7 @@ import os
 STREAM_URL = "http://10.75.111.108:81/stream"  # Update with your ESP32-CAM IP
 
 # MQTT Config
-MQTT_BROKER = "3.27.0.139"
+MQTT_BROKER = "3.27.11.106"
 MQTT_PORT = 1883
 MQTT_USER = "zaks"
 MQTT_PASS = "enggangodinginmcu"

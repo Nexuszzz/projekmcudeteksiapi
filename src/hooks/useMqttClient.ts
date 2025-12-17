@@ -24,7 +24,7 @@ const getWsUrlRuntime = (): string => {
   
   // Production with IP (fallback)
   console.log('📍 Mode: Production (IP fallback)');
-  return 'ws://3.27.0.139:8080/ws';
+  return 'ws://3.27.11.106:8080/ws';
 };
 
 // Dynamic config - computed fresh each time

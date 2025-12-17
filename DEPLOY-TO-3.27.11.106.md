@@ -1,4 +1,4 @@
-# 🚀 CARA DEPLOY KE EC2 IP: 3.27.0.139
+# 🚀 CARA DEPLOY KE EC2 IP: 3.27.11.106
 
 ## ⚡ QUICK START (5 Langkah Mudah)
 
@@ -14,7 +14,7 @@ Pastikan sudah ada:
 
 ```bash
 # Via PuTTY:
-Host: 3.27.0.139
+Host: 3.27.11.106
 Port: 22
 Connection Type: SSH
 Username: ubuntu
@@ -23,14 +23,14 @@ Auth: Pilih file .pem key Anda
 
 Atau via Command Prompt (jika sudah ada OpenSSH):
 ```cmd
-ssh -i "path\to\your-key.pem" ubuntu@3.27.0.139
+ssh -i "path\to\your-key.pem" ubuntu@3.27.11.106
 ```
 
 ### 3️⃣ Transfer File ke EC2
 
 **Opsi A: Via WinSCP**
 1. Buka WinSCP
-2. Host name: 3.27.0.139
+2. Host name: 3.27.11.106
 3. User name: ubuntu
 4. Advanced → SSH → Authentication → Private key file: pilih .pem
 5. Login
@@ -39,7 +39,7 @@ ssh -i "path\to\your-key.pem" ubuntu@3.27.0.139
 **Opsi B: Via Command (pscp)**
 ```cmd
 cd d:\rtsp-main
-pscp -i "your-key.pem" -r * ubuntu@3.27.0.139:/home/ubuntu/sudahtapibelum/
+pscp -i "your-key.pem" -r * ubuntu@3.27.11.106:/home/ubuntu/sudahtapibelum/
 ```
 
 ### 4️⃣ Jalankan Auto Deployment
@@ -67,7 +67,7 @@ Script akan otomatis:
 Setelah deployment selesai, buka browser:
 
 ```
-http://3.27.0.139
+http://3.27.11.106
 ```
 
 **Login Credentials:**
@@ -89,7 +89,7 @@ http://3.27.0.139
 
 Cara setting:
 1. Buka AWS Console → EC2 → Instances
-2. Pilih instance dengan IP 3.27.0.139
+2. Pilih instance dengan IP 3.27.11.106
 3. Tab "Security" → Click Security Group
 4. "Edit inbound rules"
 5. Add rules di atas
@@ -159,7 +159,7 @@ sudo nginx -t
 **1. Cek Security Group AWS**
 ```bash
 # Dari local Windows, test port
-telnet 3.27.0.139 80
+telnet 3.27.11.106 80
 ```
 
 **2. Cek Nginx running**
@@ -226,7 +226,7 @@ Jika Anda update code di local dan push ke GitHub:
 
 ```bash
 # Connect ke EC2
-ssh -i "your-key.pem" ubuntu@3.27.0.139
+ssh -i "your-key.pem" ubuntu@3.27.11.106
 
 # Update code
 cd ~/sudahtapibelum
@@ -249,7 +249,7 @@ pm2 restart all
 
 ### Ganti Password Admin
 
-1. Login ke dashboard: http://3.27.0.139
+1. Login ke dashboard: http://3.27.11.106
 2. Masuk dengan `admin` / `admin123`
 3. Pergi ke Settings → Change Password
 4. Ganti dengan password yang kuat
@@ -273,7 +273,7 @@ Update IP di code ESP32-CAM:
 
 ```cpp
 // Ganti dengan IP EC2
-const char* serverUrl = "http://3.27.0.139/api/esp32/capture";
+const char* serverUrl = "http://3.27.11.106/api/esp32/capture";
 ```
 
 Upload ulang code ke ESP32-CAM.
@@ -285,7 +285,7 @@ Upload ulang code ke ESP32-CAM.
 - [ ] Security Group AWS sudah di-configure (port 22, 80, 443)
 - [ ] File sudah di-transfer ke EC2
 - [ ] Script `deploy-to-ec2.sh` sudah dijalankan
-- [ ] Website bisa diakses di http://3.27.0.139
+- [ ] Website bisa diakses di http://3.27.11.106
 - [ ] Login berhasil dengan admin/admin123
 - [ ] PM2 services running (proxy-server, fire-detection)
 - [ ] Nginx serving files dengan benar
@@ -298,7 +298,7 @@ Upload ulang code ke ESP32-CAM.
 
 Website Fire Detection System sudah LIVE di:
 
-**http://3.27.0.139**
+**http://3.27.11.106**
 
 **Default Login:**
 - Username: `admin`
@@ -316,7 +316,7 @@ Website Fire Detection System sudah LIVE di:
 
 ```bash
 # Remote connect
-ssh -i "key.pem" ubuntu@3.27.0.139
+ssh -i "key.pem" ubuntu@3.27.11.106
 
 # Service management
 pm2 status

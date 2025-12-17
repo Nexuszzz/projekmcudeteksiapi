@@ -6,11 +6,11 @@
 export const MQTT_CONFIG = {
   // Broker settings
   broker: {
-    url: import.meta.env.VITE_MQTT_URL || 'ws://3.27.0.139:9001/mqtt',
+    url: import.meta.env.VITE_MQTT_URL || 'ws://3.27.11.106:9001/mqtt',
     username: import.meta.env.VITE_MQTT_USERNAME || 'zaks',
     password: import.meta.env.VITE_MQTT_PASSWORD || 'enggangodinginmcu',
     port: 1883,
-    host: '3.27.0.139',
+    host: '3.27.11.106',
   },
 
   // MQTT Topics

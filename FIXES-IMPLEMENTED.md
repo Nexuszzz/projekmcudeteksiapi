@@ -73,7 +73,7 @@ WA_BROWSER_VERSION=110.0.0
 VITE_WA_API_URL=http://localhost:3001/api/whatsapp
 
 # MQTT (Backend)
-MQTT_HOST=3.27.0.139
+MQTT_HOST=3.27.11.106
 MQTT_PORT=1883
 MQTT_USER=zaks
 MQTT_PASSWORD=your-secure-password-here

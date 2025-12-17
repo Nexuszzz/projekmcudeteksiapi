@@ -15,7 +15,7 @@
     </style>
 </head>
 <body>
-    <h1>🧪 CORS Test - EC2 Backend (3.27.0.139:8080)</h1>
+    <h1>🧪 CORS Test - EC2 Backend (3.27.11.106:8080)</h1>
     <p>Testing connection from: <span id="current-origin"></span></p>
     
     <div id="test-results"></div>
@@ -40,7 +40,7 @@
             addResult('Testing /health endpoint...', 'info');
             
             try {
-                const response = await fetch('http://3.27.0.139:8080/health', {
+                const response = await fetch('http://3.27.11.106:8080/health', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -62,7 +62,7 @@
             addResult('Testing /api/status endpoint...', 'info');
             
             try {
-                const response = await fetch('http://3.27.0.139:8080/api/status', {
+                const response = await fetch('http://3.27.11.106:8080/api/status', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -84,7 +84,7 @@
             addResult('Testing CORS preflight (OPTIONS)...', 'info');
             
             try {
-                const response = await fetch('http://3.27.0.139:8080/api/status', {
+                const response = await fetch('http://3.27.11.106:8080/api/status', {
                     method: 'OPTIONS',
                 });
                 

@@ -18,8 +18,8 @@ pm2 status
 
 echo "✅ Server restarted with updated CORS configuration!"
 echo "🌐 Testing endpoints:"
-echo "Health: http://3.27.0.139:8080/health"
-echo "Status: http://3.27.0.139:8080/api/status"
+echo "Health: http://3.27.11.106:8080/health"
+echo "Status: http://3.27.11.106:8080/api/status"
 
 # Test the endpoints
 echo "🧪 Testing connectivity..."

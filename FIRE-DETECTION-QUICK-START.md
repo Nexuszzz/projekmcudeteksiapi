@@ -197,7 +197,7 @@ ping 10.148.218.219
 ### Problem: "MQTT disconnected"
 **Solution**:
 - ✅ Check internet connection
-- ✅ Broker: 3.27.0.139:1883 harus accessible
+- ✅ Broker: 3.27.11.106:1883 harus accessible
 - ✅ Credentials: zaks / enggangodinginmcu
 
 ### Problem: "Gallery tidak update"
@@ -285,7 +285,7 @@ SEND_TO_WEB = True             # Enable/disable web upload
 SNAPSHOT_ON_DETECTION = True   # Save snapshot on fire detection
 
 # MQTT
-MQTT_BROKER = "3.27.0.139"
+MQTT_BROKER = "3.27.11.106"
 MQTT_USER = "zaks"
 MQTT_PASSWORD = "enggangodinginmcu"
 

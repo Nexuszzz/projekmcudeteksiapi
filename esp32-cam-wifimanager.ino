@@ -40,7 +40,7 @@
 #define CONFIG_TIMEOUT 180           // Timeout AP mode (3 menit)
 
 // ====== MQTT Configuration ======
-const char* MQTT_SERVER = "3.27.0.139";
+const char* MQTT_SERVER = "3.27.11.106";
 const int MQTT_PORT = 1883;
 const char* MQTT_USER = "zaks";
 const char* MQTT_PASSWORD = "enggangodinginmcu";

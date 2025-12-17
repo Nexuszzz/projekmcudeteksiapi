@@ -103,7 +103,7 @@ FireNotification component (subscribed)
 .\test-fire-event.bat
 
 # Manual
-mosquitto_pub -h 3.27.0.139 -p 1883 -u zaks -P "enggangodinginmcu" -t "lab/zaks/event" -m "{\"event\":\"flame_on\"}"
+mosquitto_pub -h 3.27.11.106 -p 1883 -u zaks -P "enggangodinginmcu" -t "lab/zaks/event" -m "{\"event\":\"flame_on\"}"
 ```
 
 ### **Expected Result:**

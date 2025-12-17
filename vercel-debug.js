@@ -7,7 +7,7 @@ console.log('🧪 Testing API connections from Vercel production...');
 console.log('Current API_CONFIG:', window.location);
 
 // Test 2: Direct API call
-fetch('http://3.27.0.139:8080/health')
+fetch('http://3.27.11.106:8080/health')
   .then(response => {
     console.log('✅ Health response:', response.status);
     return response.json();
@@ -16,7 +16,7 @@ fetch('http://3.27.0.139:8080/health')
   .catch(error => console.log('❌ Health error:', error));
 
 // Test 3: Status API call  
-fetch('http://3.27.0.139:8080/api/status')
+fetch('http://3.27.11.106:8080/api/status')
   .then(response => {
     console.log('✅ Status response:', response.status);
     return response.json();
@@ -25,7 +25,7 @@ fetch('http://3.27.0.139:8080/api/status')
   .catch(error => console.log('❌ Status error:', error));
 
 // Test 4: CORS preflight
-fetch('http://3.27.0.139:8080/health', {
+fetch('http://3.27.11.106:8080/health', {
   method: 'OPTIONS',
   headers: {
     'Content-Type': 'application/json'

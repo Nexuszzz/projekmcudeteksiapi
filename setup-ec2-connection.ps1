@@ -9,7 +9,7 @@ Write-Host "║     🔧 EC2 CONNECTION SETUP                                   
 Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-$EC2IP = "3.27.0.139"
+$EC2IP = "3.27.11.106"
 $EC2User = "ubuntu"
 $KeyPath = "C:\Users\NAUFAL\Downloads"
 

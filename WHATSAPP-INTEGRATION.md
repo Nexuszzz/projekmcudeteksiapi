@@ -118,7 +118,7 @@ Saat terjadi deteksi kebakaran:
 │                      ▼                                      │
 │         ┌────────────────────────┐                          │
 │         │    MQTT BROKER         │                          │
-│         │  (3.27.0.139)       │                          │
+│         │  (3.27.11.106)       │                          │
 │         └────────┬───────────────┘                          │
 │                  │                                          │
 │         ┌────────┴────────┐                                 │
@@ -172,7 +172,7 @@ IotCobwengdev/
 Edit `whatsapp-server/server.js`:
 ```javascript
 const MQTT_CONFIG = {
-  host: '3.27.0.139',
+  host: '3.27.11.106',
   port: 1883,
   username: 'zaks',
   password: 'enggangodinginmcu',

@@ -1,11 +1,11 @@
 @echo off
 echo ====================================
-echo 🚀 Deploy to EC2: 3.27.0.139
+echo 🚀 Deploy to EC2: 3.27.11.106
 echo ====================================
 echo.
 
 REM Set EC2 details
-set EC2_IP=3.27.0.139
+set EC2_IP=3.27.11.106
 set EC2_USER=ubuntu
 set PPK_FILE=C:\Users\NAUFAL\Downloads\sismod.ppk
 

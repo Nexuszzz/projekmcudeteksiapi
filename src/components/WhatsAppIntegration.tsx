@@ -203,7 +203,7 @@ export default function WhatsAppIntegration() {
     if (hostname === 'latom.flx.web.id') {
       return 'https://api.latom.flx.web.id';
     }
-    return 'http://3.27.0.139:8080';
+    return 'http://3.27.11.106:8080';
   }
 
   // Save recipients to localStorage AND sync to server

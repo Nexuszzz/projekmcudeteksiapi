@@ -22,14 +22,14 @@ lab/zaks/alert   → Alert notifications (kebakaran, gas, dll)
 ## 📡 MQTT Broker Configuration
 
 **Broker Details:**
-- Host: `3.27.0.139`
+- Host: `3.27.11.106`
 - Port: `1883` (TCP/MQTT)
 - Username: `zaks`
 - Password: `enggangodinginmcu`
 
 **Subscribe Wildcard:**
 ```bash
-mosquitto_sub -h 3.27.0.139 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/#' -v
+mosquitto_sub -h 3.27.11.106 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/#' -v
 ```
 
 ## ✅ File yang Telah Diupdate
@@ -121,10 +121,10 @@ mosquitto_sub -h 3.27.0.139 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/
 4. **Test Connection:**
    ```bash
    # Monitor all topics
-   mosquitto_sub -h 3.27.0.139 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/#' -v
+   mosquitto_sub -h 3.27.11.106 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/#' -v
    
    # Test publish
-   mosquitto_pub -h 3.27.0.139 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/event' -m 'BUZZER_ON'
+   mosquitto_pub -h 3.27.11.106 -p 1883 -u zaks -P 'enggangodinginmcu' -t 'lab/zaks/event' -m 'BUZZER_ON'
    ```
 
 ## ⚠️ Breaking Changes

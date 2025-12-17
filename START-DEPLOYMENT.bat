@@ -7,7 +7,7 @@ echo ╔════════════════════════
 echo ║     🚀 DEPLOY FIRE DETECTION SYSTEM TO EC2                    ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
-echo Target IP: 3.27.0.139
+echo Target IP: 3.27.11.106
 echo Status: Ready to Deploy
 echo.
 timeout /t 2 >nul
@@ -47,10 +47,10 @@ echo ╔════════════════════════
 echo ║                 📖 PANDUAN LENGKAP                             ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
-echo File panduan: DEPLOY-TO-3.27.0.139.md
+echo File panduan: DEPLOY-TO-3.27.11.106.md
 echo.
 echo Opening in default text editor...
-start notepad.exe "DEPLOY-TO-3.27.0.139.md"
+start notepad.exe "DEPLOY-TO-3.27.11.106.md"
 timeout /t 2 >nul
 pause
 goto MENU
@@ -171,7 +171,7 @@ echo.
 echo 1. Buka PuTTY
 echo.
 echo 2. Isi konfigurasi:
-echo    • Host Name: 3.27.0.139
+echo    • Host Name: 3.27.11.106
 echo    • Port: 22
 echo    • Connection Type: SSH
 echo.
@@ -197,9 +197,9 @@ echo.
 
 REM Try to open PuTTY
 if exist "C:\Program Files\PuTTY\putty.exe" (
-    start "" "C:\Program Files\PuTTY\putty.exe" -ssh ubuntu@3.27.0.139
+    start "" "C:\Program Files\PuTTY\putty.exe" -ssh ubuntu@3.27.11.106
 ) else if exist "C:\Program Files (x86)\PuTTY\putty.exe" (
-    start "" "C:\Program Files (x86)\PuTTY\putty.exe" -ssh ubuntu@3.27.0.139
+    start "" "C:\Program Files (x86)\PuTTY\putty.exe" -ssh ubuntu@3.27.11.106
 ) else (
     echo ❌ PuTTY not found!
     echo    Please install from: https://www.putty.org/
@@ -221,7 +221,7 @@ echo 1. Buka WinSCP
 echo.
 echo 2. New Site - Isi konfigurasi:
 echo    • File protocol: SFTP
-echo    • Host name: 3.27.0.139
+echo    • Host name: 3.27.11.106
 echo    • Port number: 22
 echo    • User name: ubuntu
 echo.
@@ -326,10 +326,10 @@ echo ╚════════════════════════
 echo.
 echo Opening website in browser...
 echo.
-echo URL: http://3.27.0.139
+echo URL: http://3.27.11.106
 echo.
 timeout /t 2 >nul
-start http://3.27.0.139
+start http://3.27.11.106
 echo.
 echo ════════════════════════════════════════════════════════════════
 echo.
@@ -370,13 +370,13 @@ echo ╚════════════════════════
 echo.
 echo 📚 RESOURCES:
 echo.
-echo    • Full Guide: DEPLOY-TO-3.27.0.139.md
+echo    • Full Guide: DEPLOY-TO-3.27.11.106.md
 echo    • Deployment Script: deploy-to-ec2.sh
 echo    • PM2 Config: ecosystem.config.json
 echo.
 echo 🌐 ACCESS:
 echo.
-echo    • Website: http://3.27.0.139
+echo    • Website: http://3.27.11.106
 echo    • Login: admin / admin123
 echo.
 echo 📞 SUPPORT COMMANDS:

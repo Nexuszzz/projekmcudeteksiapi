@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# 🐍 Deploy Python Fire Detection Service to EC2 (3.27.0.139)
+# 🐍 Deploy Python Fire Detection Service to EC2 (3.27.11.106)
 # ============================================================================
 
 set -e  # Exit on error
@@ -80,7 +80,7 @@ ESP32_CAM_STREAM=http://192.168.1.100:80/stream
 ESP32_CAM_IP=192.168.1.100
 
 # MQTT Configuration
-MQTT_BROKER=3.27.0.139
+MQTT_BROKER=3.27.11.106
 MQTT_PORT=1883
 MQTT_USER=zaks
 MQTT_PASSWORD=enggangodinginmcu

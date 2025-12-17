@@ -3,7 +3,7 @@
 ## ✅ File yang Sudah Dibuat
 
 ### 📖 Dokumentasi
-- **DEPLOY-TO-3.27.0.139.md** - Panduan lengkap deployment ke IP 3.27.0.139
+- **DEPLOY-TO-3.27.11.106.md** - Panduan lengkap deployment ke IP 3.27.11.106
 - **🚀-DEPLOY-EC2-GUIDE.md** - Guide umum deployment EC2
 - **QUICK-START-EC2.md** - Quick start 10 menit
 
@@ -45,7 +45,7 @@ Script ini akan membuka menu interaktif dengan opsi:
 1. Pilih menu [5] di START-DEPLOYMENT.bat
 2. WinSCP akan terbuka otomatis
 3. Login dengan:
-   - Host: 3.27.0.139
+   - Host: 3.27.11.106
    - User: ubuntu
    - Auth: file .pem Anda
 4. Drag folder ke `/home/ubuntu/sudahtapibelum`
@@ -85,7 +85,7 @@ Script akan otomatis:
 
 Setelah deployment selesai:
 
-**URL:** http://3.27.0.139
+**URL:** http://3.27.11.106
 
 **Login:**
 - Username: `admin`
@@ -105,7 +105,7 @@ Sebelum deploy, pastikan Security Group EC2 sudah allow:
 
 **Cara setting:**
 1. AWS Console → EC2 → Instances
-2. Pilih instance dengan IP 3.27.0.139
+2. Pilih instance dengan IP 3.27.11.106
 3. Tab "Security" → Click Security Group
 4. "Edit inbound rules" → Add rules
 5. Save rules
@@ -211,7 +211,7 @@ Setelah deployment, update IP di code ESP32:
 
 ```cpp
 // Ganti dengan IP EC2
-const char* serverUrl = "http://3.27.0.139/api/esp32/capture";
+const char* serverUrl = "http://3.27.11.106/api/esp32/capture";
 ```
 
 Upload ulang code ke ESP32-CAM.
@@ -233,7 +233,7 @@ Upload ulang code ke ESP32-CAM.
   - [ ] Nginx serving files
 
 - [ ] **Testing**
-  - [ ] Website bisa diakses di http://3.27.0.139
+  - [ ] Website bisa diakses di http://3.27.11.106
   - [ ] Login berhasil dengan admin/admin123
   - [ ] Dashboard muncul dengan benar
   - [ ] Real-time data berfungsi
@@ -249,7 +249,7 @@ Upload ulang code ke ESP32-CAM.
 
 ### Connect to EC2
 ```bash
-ssh -i "key.pem" ubuntu@3.27.0.139
+ssh -i "key.pem" ubuntu@3.27.11.106
 ```
 
 ### Service Management
@@ -297,7 +297,7 @@ free -h
    ```
 
 5. 🧪 **Test**
-   - Buka http://3.27.0.139
+   - Buka http://3.27.11.106
    - Login: admin / admin123
 
 ---
@@ -306,7 +306,7 @@ free -h
 
 Setelah semua langkah, website Fire Detection System akan LIVE di:
 
-**http://3.27.0.139**
+**http://3.27.11.106**
 
 **Features:**
 - 🔥 Real-time Fire Detection dengan YOLO + Gemini AI
@@ -325,4 +325,4 @@ Setelah semua langkah, website Fire Detection System akan LIVE di:
 
 **Happy Deployment! 🚀🔥**
 
-Ada pertanyaan? Cek file **DEPLOY-TO-3.27.0.139.md** untuk panduan lengkap!
+Ada pertanyaan? Cek file **DEPLOY-TO-3.27.11.106.md** untuk panduan lengkap!

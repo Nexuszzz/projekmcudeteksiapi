@@ -305,7 +305,7 @@ import json
 import time
 
 # MQTT Config
-MQTT_BROKER = "3.27.0.139"
+MQTT_BROKER = "3.27.11.106"
 MQTT_PORT = 1883
 MQTT_USER = "zaks"
 MQTT_PASS = "enggangodinginmcu"
