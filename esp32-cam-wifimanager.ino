@@ -34,6 +34,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <HTTPClient.h>      // For getting public IP
 
 // ====== WiFi Manager Configuration ======
 #define AP_NAME "FireCam-Setup"      // Nama Access Point saat setup mode (NO PASSWORD)
@@ -48,6 +49,13 @@ const char* MQTT_CLIENT_ID = "esp32cam-fire";
 const char* TOPIC_IP_ANNOUNCE = "lab/zaks/esp32cam/ip";
 const char* TOPIC_EVENT = "lab/zaks/event";
 const char* TOPIC_CMD = "lab/zaks/esp32cam/cmd";
+
+// ====== PUBLIC IP Configuration (untuk VPS access) ======
+// Kosongkan untuk auto-detect via api.ipify.org
+// Atau isi manual dengan Public IP router jika auto-detect gagal
+String PUBLIC_IP = "";           // e.g. "123.45.67.89" atau kosong untuk auto
+const int EXTERNAL_PORT = 8081;   // Port forwarding external port di router
+bool usePublicIP = true;          // Set false untuk broadcast local IP saja
 
 // ====== Pin mapping AI Thinker ESP32-CAM ======
 #define PWDN_GPIO_NUM     32
@@ -99,6 +107,49 @@ String chipIdString() {
 String getShortChipId() {
   String fullId = chipIdString();
   return fullId.substring(fullId.length() - 6);
+}
+
+// ====== Get Public IP dari api.ipify.org ======
+String cachedPublicIP = "";
+unsigned long lastPublicIPFetch = 0;
+const unsigned long PUBLIC_IP_CACHE_TIME = 300000;  // Cache 5 menit
+
+String getPublicIP() {
+  // Jika manual IP di-set, gunakan itu
+  if (PUBLIC_IP.length() > 0) {
+    return PUBLIC_IP;
+  }
+  
+  // Jika tidak pakai public IP, return local
+  if (!usePublicIP) {
+    return WiFi.localIP().toString();
+  }
+  
+  // Gunakan cache jika masih valid
+  if (cachedPublicIP.length() > 0 && (millis() - lastPublicIPFetch < PUBLIC_IP_CACHE_TIME)) {
+    return cachedPublicIP;
+  }
+  
+  Serial.println("[PUBLIC] Getting public IP from api.ipify.org...");
+  
+  HTTPClient http;
+  http.begin("http://api.ipify.org");
+  http.setTimeout(10000);
+  
+  int httpCode = http.GET();
+  
+  if (httpCode == HTTP_CODE_OK) {
+    cachedPublicIP = http.getString();
+    cachedPublicIP.trim();
+    lastPublicIPFetch = millis();
+    Serial.println("[PUBLIC] Got IP: " + cachedPublicIP);
+  } else {
+    Serial.printf("[PUBLIC] Failed, code: %d. Using local IP.\n", httpCode);
+    cachedPublicIP = WiFi.localIP().toString();
+  }
+  
+  http.end();
+  return cachedPublicIP;
 }
 
 const char* frameSizeName(framesize_t fs) {
@@ -251,22 +302,40 @@ void connectMQTT() {
 void broadcastIP() {
   if (!mqtt.connected()) return;
   
-  String ip = WiFi.localIP().toString();
-  String streamUrl = "http://" + ip + ":81/stream";
-  String snapshotUrl = "http://" + ip + "/capture";
+  String localIP = WiFi.localIP().toString();
+  String publicIP = getPublicIP();  // Get public IP (auto atau manual)
   
-  StaticJsonDocument<768> doc;
+  // URLs untuk VPS (pakai public IP + external port)
+  String streamUrl = "http://" + publicIP + ":" + String(EXTERNAL_PORT) + "/stream";
+  String snapshotUrl = "http://" + publicIP + ":" + String(EXTERNAL_PORT) + "/capture";
+  
+  // URLs lokal untuk debug
+  String localStreamUrl = "http://" + localIP + ":81/stream";
+  String localSnapshotUrl = "http://" + localIP + "/capture";
+  
+  StaticJsonDocument<1024> doc;
   doc["chipId"] = chipIdString();
   doc["id"] = "firecam-" + getShortChipId();
-  doc["ip"] = ip;
+  
+  // IP utama (yang VPS pakai) = public IP
+  doc["ip"] = publicIP;
+  doc["port"] = EXTERNAL_PORT;
   doc["stream_url"] = streamUrl;
   doc["snapshot_url"] = snapshotUrl;
-  doc["status_url"] = "http://" + ip + "/status";
+  
+  // Local IP untuk referensi/debug
+  doc["local_ip"] = localIP;
+  doc["local_port"] = 81;
+  doc["local_stream_url"] = localStreamUrl;
+  doc["local_snapshot_url"] = localSnapshotUrl;
+  
+  doc["status_url"] = "http://" + publicIP + ":" + String(EXTERNAL_PORT) + "/status";
   doc["ssid"] = WiFi.SSID();
   doc["rssi"] = WiFi.RSSI();
   doc["uptime"] = (millis() - bootMs) / 1000;
   doc["free_heap"] = ESP.getFreeHeap();
   doc["camera_ready"] = true;
+  doc["using_public_ip"] = (publicIP != localIP);
   doc["ts"] = millis();
   
   String payload;
@@ -281,12 +350,12 @@ void broadcastIP() {
   if (published) {
     Serial.println("\n[MQTT] 📡 IP Broadcast SUCCESS:");
     Serial.printf("   ID: firecam-%s\n", getShortChipId().c_str());
-    Serial.printf("   IP: %s\n", ip.c_str());
+    Serial.printf("   Public IP: %s:%d\n", publicIP.c_str(), EXTERNAL_PORT);
+    Serial.printf("   Local IP:  %s:81\n", localIP.c_str());
     Serial.printf("   Stream: %s\n", streamUrl.c_str());
     Serial.printf("   WiFi: %s (%d dBm)\n", WiFi.SSID().c_str(), WiFi.RSSI());
   } else {
     Serial.println("[MQTT] ❌ IP Broadcast FAILED");
-    Serial.printf("   Reason: Buffer overflow or connection issue\n");
     Serial.printf("   Payload length: %d bytes\n", payload.length());
     Serial.printf("   MQTT State: %d\n", mqtt.state());
   }

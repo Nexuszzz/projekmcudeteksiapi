@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Camera, Video } from 'lucide-react';
 import ESP32CamStream from '../components/ESP32CamStreamNew';
 import VideoGallery from '../components/VideoGallery';
+import FireDetectionControl from '../components/FireDetectionControl';
 
 export default function LiveStream() {
   const [showInfo, setShowInfo] = useState(false);
@@ -123,17 +124,25 @@ export default function LiveStream() {
       )}
 
       {/* Content - Conditional based on active tab */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        {activeTab === 'stream' ? (
-          viewMode === 'single' ? (
-            <ESP32CamStream />
-          ) : (
-            <GridView />
-          )
-        ) : (
+      {activeTab === 'stream' ? (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Fire Detection Control */}
+          <FireDetectionControl />
+          
+          {/* Stream View */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            {viewMode === 'single' ? (
+              <ESP32CamStream />
+            ) : (
+              <GridView />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <VideoGallery />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Stream Tips - Only show on stream tab */}
       {activeTab === 'stream' && (
