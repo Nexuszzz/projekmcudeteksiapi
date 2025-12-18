@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Camera, Video } from 'lucide-react';
-import ESP32CamStream from '../components/ESP32CamStream';
+import ESP32CamStream from '../components/ESP32CamStreamNew';
 import VideoGallery from '../components/VideoGallery';
 
 export default function LiveStream() {
