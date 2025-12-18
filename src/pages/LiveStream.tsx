@@ -17,7 +17,8 @@ export default function LiveStream() {
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [customUrl, setCustomUrl] = useState('');
-  const [refreshInterval, setRefreshInterval] = useState(500);
+  const [refreshInterval, setRefreshInterval] = useState(2000); // Slower default to not overload ESP32
+  const [, setErrorCount] = useState(0);
   
   // Refs
   const imgRef = useRef<HTMLImageElement>(null);
@@ -69,7 +70,7 @@ export default function LiveStream() {
     setFireDetectLoading(false);
   };
 
-  // Load frame
+  // Load frame with better error handling
   const loadFrame = useCallback(() => {
     if (!streamUrl || !imgRef.current) return;
     
@@ -83,14 +84,22 @@ export default function LiveStream() {
         setStreamError('');
         setLastUpdate(new Date());
         setFrameCount(prev => prev + 1);
+        setErrorCount(0); // Reset error count on success
       }
     };
     
     img.onerror = () => {
-      setStreamError('Failed to load frame');
-      setIsStreaming(false);
+      setErrorCount(prev => {
+        const newCount = prev + 1;
+        if (newCount >= 5) {
+          setStreamError('ESP32-CAM not responding. Check camera connection.');
+          setIsStreaming(false);
+        }
+        return newCount;
+      });
     };
     
+    // Add timeout by setting src
     img.src = `${streamUrl}?t=${timestamp}`;
   }, [streamUrl]);
 
@@ -221,13 +230,13 @@ export default function LiveStream() {
             
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                Refresh Interval: {refreshInterval}ms
+                Refresh Interval: {refreshInterval}ms (Recommended: 1500-3000ms)
               </label>
               <input
                 type="range"
-                min="200"
-                max="2000"
-                step="100"
+                min="1000"
+                max="5000"
+                step="500"
                 value={refreshInterval}
                 onChange={(e) => {
                   setRefreshInterval(Number(e.target.value));
@@ -239,8 +248,8 @@ export default function LiveStream() {
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-gray-500">
-                <span>Fast (200ms)</span>
-                <span>Slow (2000ms)</span>
+                <span>Fast (1s)</span>
+                <span>Slow (5s)</span>
               </div>
             </div>
           </div>
