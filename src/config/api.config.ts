@@ -6,8 +6,9 @@
  * - Frontend: https://latom.flx.web.id
  * - Backend API: https://api.latom.flx.web.id
  * 
- * Go-WhatsApp (GOWA) Server:
- * - Default port: 3000
+ * Go-WhatsApp (GOWA) Servers:
+ * - GOWA1: Local/default server (port 3000)
+ * - GOWA2: Production server at https://gowa2.flx.web.id
  * - GitHub: https://github.com/aldinokemal/go-whatsapp-web-multidevice
  */
 
@@ -31,8 +32,9 @@ const getApiDomain = () => isDomainAccess() ? 'api.latom.flx.web.id' : '3.27.11.
 const useHttps = () => isDomainAccess();
 
 // GOWA (Go-WhatsApp) Configuration
-// Default GOWA port is 3000
+// GOWA2 is the production server at https://gowa2.flx.web.id
 const GOWA_PORT = import.meta.env.VITE_GOWA_PORT || '3000';
+const GOWA2_URL = 'https://gowa2.flx.web.id';
 
 // GETTER FUNCTIONS - computed fresh every call
 export const getApiConfig = () => {
@@ -41,8 +43,9 @@ export const getApiConfig = () => {
       API_BASE: 'http://localhost:8080',
       WS_URL: 'ws://localhost:8080/ws',
       VIDEO_API: 'http://localhost:8080/api/video',
-      // GOWA API - Go-WhatsApp REST API (replaces Baileys)
+      // GOWA API - prefer GOWA2 for production features
       GOWA_API: `http://localhost:${GOWA_PORT}`,
+      GOWA2_API: GOWA2_URL,
     };
   }
   
@@ -52,8 +55,9 @@ export const getApiConfig = () => {
     API_BASE: `${https ? 'https' : 'http'}://${apiDomain}`,
     WS_URL: `${https ? 'wss' : 'ws'}://${apiDomain}/ws`,
     VIDEO_API: `${https ? 'https' : 'http'}://${apiDomain}/api/video`,
-    // GOWA API via proxy or direct
+    // GOWA API via proxy - backend will route to GOWA2
     GOWA_API: `${https ? 'https' : 'http'}://${apiDomain}/gowa`,
+    GOWA2_API: GOWA2_URL,
   };
 };
 
@@ -65,13 +69,16 @@ export const getWsUrl = () => getApiConfig().WS_URL;
 export const getApiBaseUrl = () => getApiConfig().API_BASE;
 export const getVideoApiUrl = () => getApiConfig().VIDEO_API;
 export const getGowaApiUrl = () => getApiConfig().GOWA_API;
+export const getGowa2ApiUrl = () => GOWA2_URL;
 
 // Static exports (for backward compatibility, but prefer getters)
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || getApiConfig().API_BASE;
 export const WS_URL = import.meta.env.VITE_WS_URL || getApiConfig().WS_URL;
 export const VIDEO_API_URL = import.meta.env.VITE_VIDEO_API_URL || getApiConfig().VIDEO_API;
 export const GOWA_API_URL = import.meta.env.VITE_GOWA_API_URL || getApiConfig().GOWA_API;
+export const GOWA2_API_URL = GOWA2_URL;
 
 // Log configuration
 console.log(`🌐 Running on: ${getHostname()}`);
 console.log(`📡 API Config:`, getApiConfig());
+console.log(`📱 GOWA2 Server: ${GOWA2_URL}`);

@@ -1,8 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Play, Square, RefreshCw, Settings, Wifi, WifiOff, Maximize2, Minimize2, Volume2, VolumeX, Image, Video, AlertTriangle, CheckCircle, Clock, Signal } from 'lucide-react';
 
-// Default ESP32-CAM URL via Cloudflare Tunnel
-const DEFAULT_STREAM_URL = 'https://esp32cam.izinmok.my.id';
+// Stream URL - use proxy on production to avoid CORS
+const getStreamUrl = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'latom.flx.web.id') {
+      return 'https://api.latom.flx.web.id/esp32cam';
+    }
+  }
+  return 'https://esp32cam.izinmok.my.id';
+};
+
+const DEFAULT_STREAM_URL = getStreamUrl();
 
 type StreamMode = 'mjpeg' | 'snapshot';
 
@@ -46,20 +56,24 @@ export default function LiveStream() {
   const fpsCounterRef = useRef<number>(0);
   const lastFpsUpdateRef = useRef<number>(Date.now());
 
-  // Check camera status
+  // Check camera status using image probe (avoids CORS issues)
   const checkCameraStatus = useCallback(async () => {
     const startTime = Date.now();
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    return new Promise<boolean>((resolve) => {
+      const img = new window.Image();
+      const timeoutId = setTimeout(() => {
+        img.src = '';
+        setCameraStatus(prev => ({
+          ...prev,
+          online: false,
+          lastCheck: new Date()
+        }));
+        resolve(false);
+      }, 10000);
       
-      const response = await fetch(`${streamUrl}/status`, {
-        signal: controller.signal,
-        mode: 'cors'
-      });
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
+      img.onload = () => {
+        clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
         setCameraStatus(prev => ({
           ...prev,
@@ -68,18 +82,22 @@ export default function LiveStream() {
           latency
         }));
         setStreamError('');
-        return true;
-      }
-    } catch (err) {
-      console.log('Camera status check failed:', err);
-    }
-    
-    setCameraStatus(prev => ({
-      ...prev,
-      online: false,
-      lastCheck: new Date()
-    }));
-    return false;
+        resolve(true);
+      };
+      
+      img.onerror = () => {
+        clearTimeout(timeoutId);
+        setCameraStatus(prev => ({
+          ...prev,
+          online: false,
+          lastCheck: new Date()
+        }));
+        resolve(false);
+      };
+      
+      // Use capture endpoint to probe camera (works without CORS)
+      img.src = `${streamUrl}/capture?probe=${Date.now()}`;
+    });
   }, [streamUrl]);
 
   // Start MJPEG stream
@@ -451,6 +469,7 @@ export default function LiveStream() {
                   {streamMode === 'mjpeg' ? (
                     <img
                       ref={mjpegRef}
+                      src={`${streamUrl}/stream`}
                       alt="ESP32-CAM MJPEG Stream"
                       className="w-full h-full object-contain"
                       onLoad={handleMjpegLoad}

@@ -163,7 +163,8 @@ os.makedirs(RECORD_DIR, exist_ok=True)
 # WhatsApp/GOWA Configuration
 ENABLE_WHATSAPP = not args.no_whatsapp
 GOWA_API_URL = os.getenv('GOWA_API_URL', 'https://gowa2.flx.web.id')
-GOWA_AUTH = os.getenv('GOWA_AUTH', 'Basic YWRtaW46R293YTJBZG1pbjIwMjU=')
+GOWA2_API_URL = os.getenv('GOWA2_API_URL', 'https://gowa2.flx.web.id')  # Primary GOWA2 server
+GOWA_AUTH = os.getenv('GOWA_AUTH', '')
 
 # Alert Cooldowns
 ALERT_COOLDOWN = 5.0
@@ -585,16 +586,19 @@ def send_whatsapp_alert(frame, confidence, gemini_verified=False):
 _Sent from Fire Detection VPS_"""
         
         success_count = 0
+        
+        # ========================================
+        # SEND TO INDIVIDUAL RECIPIENTS
+        # ========================================
         for recipient in enabled_recipients:
             phone = recipient.get('phone', '').replace('+', '')
             
             try:
-                # Send image with caption
+                # Send image with caption via GOWA2
                 resp = requests.post(
-                    f"{GOWA_API_URL}/send/image",
+                    f"{GOWA2_API_URL}/send/image",
                     headers={
-                        'Content-Type': 'application/json',
-                        'Authorization': GOWA_AUTH
+                        'Content-Type': 'application/json'
                     },
                     json={
                         'phone': phone,
@@ -611,6 +615,48 @@ _Sent from Fire Detection VPS_"""
             except Exception as e:
                 if args.debug:
                     print(f"   ⚠️  WhatsApp error for {phone}: {e}")
+        
+        # ========================================
+        # SEND TO WHATSAPP GROUPS via GOWA2
+        # ========================================
+        try:
+            # Get alert groups config from backend
+            groups_resp = requests.get(f"{VPS_API_BASE}/api/alert-groups", timeout=5)
+            if groups_resp.status_code == 200:
+                groups_data = groups_resp.json()
+                if groups_data.get('fireAlertEnabled', False):
+                    alert_groups = groups_data.get('alertGroups', [])
+                    enabled_groups = [g for g in alert_groups if g.get('enabled', True)]
+                    
+                    if enabled_groups:
+                        print(f"   📱 Sending to {len(enabled_groups)} WhatsApp groups...")
+                        
+                        for group in enabled_groups:
+                            try:
+                                group_resp = requests.post(
+                                    f"{GOWA2_API_URL}/send/image",
+                                    headers={'Content-Type': 'application/json'},
+                                    json={
+                                        'phone': group.get('jid'),
+                                        'image': image_b64,
+                                        'caption': message
+                                    },
+                                    timeout=30
+                                )
+                                
+                                if group_resp.status_code == 200 and group_resp.json().get('code') == 'SUCCESS':
+                                    success_count += 1
+                                    print(f"   📢 Group sent: {group.get('name')}")
+                                else:
+                                    print(f"   ⚠️  Group failed: {group.get('name')}")
+                                    
+                            except Exception as e:
+                                print(f"   ⚠️  Group error {group.get('name')}: {e}")
+                            
+                            # Small delay between messages
+                            time.sleep(0.5)
+        except Exception as e:
+            print(f"   ⚠️  Failed to send to groups: {e}")
         
         if success_count > 0:
             last_whatsapp_time = current_time

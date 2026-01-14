@@ -36,10 +36,18 @@ const TOPIC_ALL = 'lab/zaks/#'
 // ================================================================================
 // GOWA (GO-WHATSAPP) AUTO NOTIFICATION SYSTEM
 // ================================================================================
+// GOWA1: Local/default server  |  GOWA2: Production server at flx.web.id
 const GOWA_SERVER_URL = process.env.GOWA_SERVER_URL || 'http://localhost:3000'
+const GOWA2_SERVER_URL = process.env.GOWA2_SERVER_URL || 'https://gowa2.flx.web.id'
+const USE_GOWA2 = process.env.USE_GOWA2 === 'true' || true  // Default use GOWA2
+const ACTIVE_GOWA_URL = USE_GOWA2 ? GOWA2_SERVER_URL : GOWA_SERVER_URL
+
 const RECIPIENTS_FILE = path.join(__dirname, 'whatsapp-recipients.json')
+const ALERT_GROUPS_FILE = path.join(__dirname, 'alert-groups.json')
 const GAS_DANGER_THRESHOLD = parseInt(process.env.GAS_THRESHOLD) || 4095  // ADC max = bahaya gas
 const NOTIFICATION_COOLDOWN = parseInt(process.env.NOTIFICATION_COOLDOWN) || 60000  // 60 detik cooldown
+
+console.log(`📱 GOWA Server: ${ACTIVE_GOWA_URL} (${USE_GOWA2 ? 'GOWA2' : 'GOWA1'})`)
 
 // In-memory recipients storage
 let whatsappRecipients = []
@@ -50,6 +58,124 @@ let notificationStats = {
   totalSent: 0,
   lastSent: null,
   failures: []
+}
+
+// Alert Groups storage for WhatsApp Group notifications
+let alertGroups = []
+let fireAlertToGroupEnabled = false
+let lastGroupNotificationTime = 0
+
+// Load alert groups from file
+function loadAlertGroups() {
+  try {
+    if (fs.existsSync(ALERT_GROUPS_FILE)) {
+      const data = fs.readFileSync(ALERT_GROUPS_FILE, 'utf8')
+      const parsed = JSON.parse(data)
+      alertGroups = parsed.groups || []
+      fireAlertToGroupEnabled = parsed.fireAlertEnabled || false
+      console.log(`📱 Loaded ${alertGroups.length} alert groups (enabled: ${fireAlertToGroupEnabled})`)
+      alertGroups.forEach(g => {
+        console.log(`   - ${g.name}: ${g.jid} (${g.enabled ? '✅' : '❌'})`)
+      })
+    }
+  } catch (error) {
+    console.error('❌ Failed to load alert groups:', error.message)
+  }
+}
+
+// Save alert groups to file
+function saveAlertGroups() {
+  try {
+    const data = { groups: alertGroups, fireAlertEnabled: fireAlertToGroupEnabled }
+    fs.writeFileSync(ALERT_GROUPS_FILE, JSON.stringify(data, null, 2))
+    console.log(`💾 Saved ${alertGroups.length} alert groups`)
+  } catch (error) {
+    console.error('❌ Failed to save alert groups:', error.message)
+  }
+}
+
+// Send WhatsApp notification to GROUPS via GOWA2
+async function sendGowaGroupNotification(message, alertType = 'fire', imageBase64 = null) {
+  const now = Date.now()
+  
+  if (now - lastGroupNotificationTime < NOTIFICATION_COOLDOWN) {
+    const remaining = Math.round((NOTIFICATION_COOLDOWN - (now - lastGroupNotificationTime)) / 1000)
+    console.log(`⏳ Group notification cooldown active (${remaining}s remaining)`)
+    return { success: false, reason: 'cooldown', remaining }
+  }
+  
+  if (!fireAlertToGroupEnabled) {
+    console.log('⚠️ Fire alert to groups is disabled')
+    return { success: false, reason: 'disabled' }
+  }
+  
+  const enabledGroups = alertGroups.filter(g => g.enabled !== false)
+  if (enabledGroups.length === 0) {
+    console.log('⚠️ No alert groups enabled')
+    return { success: false, reason: 'no_groups' }
+  }
+  
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`📤 SENDING ${alertType.toUpperCase()} ALERT TO ${enabledGroups.length} GROUPS (GOWA2)`)
+  console.log(`${'='.repeat(60)}`)
+  
+  const results = []
+  lastGroupNotificationTime = now
+  
+  for (const group of enabledGroups) {
+    try {
+      console.log(`📤 Sending to group: ${group.name} (${group.jid})...`)
+      
+      let response
+      
+      if (imageBase64) {
+        // Send image with caption to group
+        response = await fetch(`${GOWA2_SERVER_URL}/send/image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: group.jid,
+            image: imageBase64,
+            caption: message
+          })
+        })
+      } else {
+        // Send text message to group
+        response = await fetch(`${GOWA2_SERVER_URL}/send/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: group.jid,
+            message: message
+          })
+        })
+      }
+      
+      const data = await response.json()
+      
+      if (response.ok && data.code === 'SUCCESS') {
+        console.log(`✅ SUCCESS: Sent to group ${group.name}`)
+        results.push({ jid: group.jid, name: group.name, success: true })
+        notificationStats.totalSent++
+        notificationStats.lastSent = new Date().toISOString()
+      } else {
+        console.error(`❌ FAILED: ${group.name} - ${data.message || JSON.stringify(data)}`)
+        results.push({ jid: group.jid, name: group.name, success: false, error: data })
+      }
+    } catch (error) {
+      console.error(`❌ ERROR: ${group.name} - ${error.message}`)
+      results.push({ jid: group.jid, name: group.name, success: false, error: error.message })
+    }
+    
+    // Small delay between messages
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+  
+  console.log(`${'='.repeat(60)}`)
+  console.log(`📊 Group Results: ${results.filter(r => r.success).length}/${results.length} sent successfully`)
+  console.log(`${'='.repeat(60)}\n`)
+  
+  return { success: true, results }
 }
 
 // Load recipients from file
@@ -248,7 +374,35 @@ async function processAlertEvent(topic, payload) {
     if (data.event === 'flame_on' || data.type === 'fire' || data.flame === true) {
       console.log('🔥 FIRE DETECTED! Sending notifications...')
       const message = createAlertMessage('fire', { deviceId: data.id || data.deviceId })
+      
+      // Send to individual recipients
       await sendGowaNotification(message, 'fire')
+      
+      // Also send to WhatsApp Groups via GOWA2
+      if (fireAlertToGroupEnabled && alertGroups.length > 0) {
+        console.log('📱 Also sending to WhatsApp Groups...')
+        await sendGowaGroupNotification(message, 'fire')
+      }
+      return
+    }
+    
+    // Check for ESP32-CAM fire detection (from Python VPS script)
+    if (data.event === 'fire_detected' || data.type === 'fire_detection_photo') {
+      console.log('📸 ESP32-CAM FIRE DETECTED! Sending notifications...')
+      const message = createAlertMessage('fire_camera', {
+        confidence: data.yolo_confidence || data.confidence,
+        cameraIp: data.camera_ip || data.cameraIp,
+        geminiVerified: data.gemini_verified || data.geminiVerified
+      })
+      
+      // Send to individual recipients
+      await sendGowaNotification(message, 'fire')
+      
+      // Also send to WhatsApp Groups via GOWA2
+      if (fireAlertToGroupEnabled && alertGroups.length > 0) {
+        console.log('📱 Also sending to WhatsApp Groups...')
+        await sendGowaGroupNotification(message, 'fire')
+      }
       return
     }
     
@@ -256,7 +410,15 @@ async function processAlertEvent(topic, payload) {
     if (data.gasA !== undefined && data.gasA >= GAS_DANGER_THRESHOLD) {
       console.log(`💨 GAS DANGER! Level: ${data.gasA} (threshold: ${GAS_DANGER_THRESHOLD})`)
       const message = createAlertMessage('gas', { gasValue: data.gasA, deviceId: data.id })
+      
+      // Send to individual recipients
       await sendGowaNotification(message, 'gas')
+      
+      // Also send to WhatsApp Groups
+      if (fireAlertToGroupEnabled && alertGroups.length > 0) {
+        console.log('📱 Also sending gas alert to WhatsApp Groups...')
+        await sendGowaGroupNotification(message, 'gas')
+      }
       return
     }
     
@@ -266,9 +428,11 @@ async function processAlertEvent(topic, payload) {
       if (data.gasA && data.gasA >= GAS_DANGER_THRESHOLD) {
         const message = createAlertMessage('gas', { gasValue: data.gasA, deviceId: data.id })
         await sendGowaNotification(message, 'gas')
+        if (fireAlertToGroupEnabled) await sendGowaGroupNotification(message, 'gas')
       } else {
         const message = createAlertMessage('fire', { deviceId: data.id })
         await sendGowaNotification(message, 'fire')
+        if (fireAlertToGroupEnabled) await sendGowaGroupNotification(message, 'fire')
       }
       return
     }
@@ -280,6 +444,7 @@ async function processAlertEvent(topic, payload) {
 
 // Initialize recipients on startup
 loadRecipients()
+loadAlertGroups()
 
 // ================================================================================
 
@@ -846,10 +1011,175 @@ app.post('/api/notifications/reset-cooldown', (req, res) => {
   lastNotificationTime = 0
   lastGasNotificationTime = 0
   lastFireNotificationTime = 0
+  lastGroupNotificationTime = 0
   res.json({
     success: true,
     message: 'All cooldowns reset'
   })
+})
+
+// ================================================================================
+// ALERT GROUPS API - WhatsApp Group Notifications
+// ================================================================================
+
+// Get alert groups configuration
+app.get('/api/alert-groups', (req, res) => {
+  res.json({
+    success: true,
+    alertGroups: alertGroups,
+    fireAlertEnabled: fireAlertToGroupEnabled,
+    gowaServer: GOWA2_SERVER_URL
+  })
+})
+
+// Save alert groups configuration
+app.post('/api/alert-groups', (req, res) => {
+  const { groups, fireAlertEnabled } = req.body
+  
+  if (groups !== undefined) {
+    if (!Array.isArray(groups)) {
+      return res.status(400).json({
+        success: false,
+        error: 'groups must be an array'
+      })
+    }
+    alertGroups = groups.map(g => ({
+      jid: g.jid,
+      name: g.name,
+      enabled: g.enabled !== false
+    }))
+  }
+  
+  if (fireAlertEnabled !== undefined) {
+    fireAlertToGroupEnabled = fireAlertEnabled
+  }
+  
+  saveAlertGroups()
+  
+  console.log(`📱 Alert groups updated: ${alertGroups.length} groups, enabled: ${fireAlertToGroupEnabled}`)
+  
+  res.json({
+    success: true,
+    alertGroups: alertGroups,
+    fireAlertEnabled: fireAlertToGroupEnabled
+  })
+})
+
+// Toggle fire alert to groups
+app.post('/api/alert-groups/toggle', (req, res) => {
+  fireAlertToGroupEnabled = !fireAlertToGroupEnabled
+  saveAlertGroups()
+  
+  res.json({
+    success: true,
+    fireAlertEnabled: fireAlertToGroupEnabled,
+    message: `Fire alert to groups ${fireAlertToGroupEnabled ? 'enabled' : 'disabled'}`
+  })
+})
+
+// Add a group to alert list
+app.post('/api/alert-groups/add', (req, res) => {
+  const { jid, name } = req.body
+  
+  if (!jid || !name) {
+    return res.status(400).json({
+      success: false,
+      error: 'jid and name are required'
+    })
+  }
+  
+  // Check if already exists
+  if (alertGroups.find(g => g.jid === jid)) {
+    return res.status(409).json({
+      success: false,
+      error: 'Group already in alert list'
+    })
+  }
+  
+  alertGroups.push({ jid, name, enabled: true })
+  saveAlertGroups()
+  
+  res.json({
+    success: true,
+    alertGroups: alertGroups
+  })
+})
+
+// Remove a group from alert list
+app.delete('/api/alert-groups/:jid', (req, res) => {
+  const { jid } = req.params
+  const index = alertGroups.findIndex(g => g.jid === jid)
+  
+  if (index === -1) {
+    return res.status(404).json({
+      success: false,
+      error: 'Group not found in alert list'
+    })
+  }
+  
+  alertGroups.splice(index, 1)
+  saveAlertGroups()
+  
+  res.json({
+    success: true,
+    alertGroups: alertGroups
+  })
+})
+
+// Test send to groups
+app.post('/api/alert-groups/test', async (req, res) => {
+  const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+  const testMessage = `🧪 *TEST ALERT - WhatsApp Group*\n\n` +
+                     `Ini adalah pesan test dari Fire Detection System.\n\n` +
+                     `📅 Waktu: ${timestamp}\n` +
+                     `📱 Server: GOWA2\n\n` +
+                     `✅ Jika grup ini menerima pesan, notifikasi grup berfungsi!\n\n` +
+                     `🤖 _Pesan otomatis dari Fire Detection System_`
+  
+  // Temporarily bypass cooldown for test
+  lastGroupNotificationTime = 0
+  
+  const result = await sendGowaGroupNotification(testMessage, 'test')
+  
+  res.json({
+    success: result.success,
+    results: result.results || [],
+    message: result.reason || 'Test sent'
+  })
+})
+
+// Fetch available WhatsApp groups from GOWA2
+app.get('/api/whatsapp-groups', async (req, res) => {
+  try {
+    const response = await fetch(`${GOWA2_SERVER_URL}/user/my/groups`, {
+      headers: { 'Accept': 'application/json' }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`GOWA2 returned ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (data.code === 'SUCCESS' && data.results?.data) {
+      res.json({
+        success: true,
+        groups: data.results.data,
+        count: data.results.data.length
+      })
+    } else {
+      res.json({
+        success: false,
+        error: data.message || 'No groups found'
+      })
+    }
+  } catch (error) {
+    console.error('Failed to fetch WhatsApp groups:', error.message)
+    res.status(503).json({
+      success: false,
+      error: `Failed to fetch groups: ${error.message}`
+    })
+  }
 })
 
 // ================================================================================

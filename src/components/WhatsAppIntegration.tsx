@@ -36,6 +36,10 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  MessageCircle,
+  Flame,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { useTelemetryStore } from '../store/useTelemetryStore';
 import { getGowaApiUrl } from '../config/api.config';
@@ -66,6 +70,20 @@ interface GowaDevice {
   name: string;
 }
 
+interface GowaGroup {
+  JID: string;
+  Name: string;
+  Topic?: string;
+  IsParent?: boolean;
+  Participants?: { PhoneNumber: string; IsAdmin: boolean }[];
+}
+
+interface AlertGroup {
+  jid: string;
+  name: string;
+  enabled: boolean;
+}
+
 export default function WhatsAppIntegration() {
   const { preferences } = useTelemetryStore();
   const isDark = preferences.theme === 'dark';
@@ -92,6 +110,13 @@ export default function WhatsAppIntegration() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [devices, setDevices] = useState<GowaDevice[]>([]);
+  
+  // Group alert states
+  const [gowaGroups, setGowaGroups] = useState<GowaGroup[]>([]);
+  const [alertGroups, setAlertGroups] = useState<AlertGroup[]>([]);
+  const [fireAlertToGroup, setFireAlertToGroup] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [showGroupSelector, setShowGroupSelector] = useState(false);
 
   // Phone number validation (Indonesian format)
   const validatePhoneNumber = (phone: string): boolean => {
@@ -149,12 +174,124 @@ export default function WhatsAppIntegration() {
     }
   }, [GOWA_API]);
 
+  // Fetch WhatsApp groups from backend (which fetches from GOWA2)
+  const fetchGowaGroups = useCallback(async () => {
+    if (connectionState.status !== 'connected') return;
+    
+    setLoadingGroups(true);
+    try {
+      // Use our backend endpoint which proxies to GOWA2
+      const res = await fetch(`${getProxyApiUrl()}/api/whatsapp-groups`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.groups) {
+          setGowaGroups(data.groups);
+          console.log(`✅ Loaded ${data.groups.length} WhatsApp groups from GOWA2`);
+        } else {
+          console.log('⚠️ No groups returned:', data.error);
+        }
+      } else {
+        // Fallback to direct GOWA API call
+        const directRes = await fetch(`${GOWA_API}/user/my/groups`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (directRes.ok) {
+          const data = await directRes.json();
+          if (data.code === 'SUCCESS' && data.results?.data) {
+            setGowaGroups(data.results.data);
+            console.log(`✅ Loaded ${data.results.data.length} WhatsApp groups (direct)`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, [GOWA_API, connectionState.status]);
+
+  // Load alert groups config from server
+  const loadAlertGroupsConfig = useCallback(async () => {
+    try {
+      const res = await fetch(`${getProxyApiUrl()}/api/alert-groups`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAlertGroups(data.alertGroups || []);
+          setFireAlertToGroup(data.fireAlertEnabled || false);
+          console.log(`✅ Loaded alert groups config from server (${data.alertGroups?.length || 0} groups)`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load alert groups config:', err);
+    }
+  }, []);
+
+  // Save alert groups config to server
+  const saveAlertGroupsConfig = useCallback(async (groups: AlertGroup[], enabled: boolean) => {
+    try {
+      const res = await fetch(`${getProxyApiUrl()}/api/alert-groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groups, fireAlertEnabled: enabled })
+      });
+      
+      if (res.ok) {
+        setSuccess('✅ Konfigurasi grup alert tersimpan ke server');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (err) {
+      console.error('Failed to save alert groups config:', err);
+      setError('Gagal menyimpan konfigurasi grup');
+    }
+  }, []);
+
+  // Toggle group for fire alerts
+  const toggleGroupAlert = (group: GowaGroup) => {
+    const existing = alertGroups.find(g => g.jid === group.JID);
+    let newGroups: AlertGroup[];
+    
+    if (existing) {
+      newGroups = alertGroups.filter(g => g.jid !== group.JID);
+    } else {
+      newGroups = [...alertGroups, { jid: group.JID, name: group.Name, enabled: true }];
+    }
+    
+    setAlertGroups(newGroups);
+    saveAlertGroupsConfig(newGroups, fireAlertToGroup);
+  };
+
+  // Toggle fire alert to group
+  const toggleFireAlertEnabled = () => {
+    const newEnabled = !fireAlertToGroup;
+    setFireAlertToGroup(newEnabled);
+    saveAlertGroupsConfig(alertGroups, newEnabled);
+  };
+
   // Poll connection status
   useEffect(() => {
     checkConnectionStatus();
     const interval = setInterval(checkConnectionStatus, 5000);
     return () => clearInterval(interval);
   }, [checkConnectionStatus]);
+
+  // Load alert groups config on mount
+  useEffect(() => {
+    loadAlertGroupsConfig();
+  }, [loadAlertGroupsConfig]);
+
+  // Fetch groups when connected
+  useEffect(() => {
+    if (connectionState.status === 'connected') {
+      fetchGowaGroups();
+    }
+  }, [connectionState.status, fetchGowaGroups]);
 
   // Load recipients from server on mount
   useEffect(() => {
@@ -528,6 +665,45 @@ export default function WhatsAppIntegration() {
       setLoading(false);
     }
   }
+
+  /*
+  // Test send to all alert groups (future feature - reserved)
+  const handleTestGroupAlert = async () => {
+    if (connectionState.status !== 'connected') {
+      setError('WhatsApp belum terhubung!');
+      return;
+    }
+    
+    if (alertGroups.length === 0) {
+      setError('Pilih grup terlebih dahulu!');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await fetch(`${getProxyApiUrl()}/api/alert-groups/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        const successCount = data.results?.filter((r: any) => r.success).length || 0;
+        setSuccess(`✅ Test alert dikirim ke ${successCount}/${alertGroups.length} grup`);
+      } else {
+        throw new Error(data.message || 'Failed to send test');
+      }
+    } catch (err: any) {
+      console.error('Group test error:', err);
+      setError(`Gagal kirim test ke grup: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+  */
 
   // Get status config for UI
   const getStatusConfig = () => {
@@ -989,6 +1165,166 @@ export default function WhatsAppIntegration() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Group Fire Alerts Panel */}
+        <div className={`backdrop-blur-sm rounded-2xl p-6 shadow-2xl ${
+          isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+        }`}>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/20 rounded-lg">
+                <Flame className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Group Fire Alerts
+                </h2>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Kirim notifikasi kebakaran ke grup WhatsApp
+                </p>
+              </div>
+            </div>
+            
+            {/* Toggle Fire Alert */}
+            <button
+              onClick={toggleFireAlertEnabled}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                fireAlertToGroup
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                  : 'bg-gray-500/20 text-gray-400 border border-gray-500/50'
+              }`}
+            >
+              {fireAlertToGroup ? (
+                <ToggleRight className="w-5 h-5" />
+              ) : (
+                <ToggleLeft className="w-5 h-5" />
+              )}
+              <span className="font-medium">
+                {fireAlertToGroup ? 'Aktif' : 'Nonaktif'}
+              </span>
+            </button>
+          </div>
+
+          {/* Selected Groups */}
+          {alertGroups.length > 0 && (
+            <div className="mb-4">
+              <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Grup yang dipilih ({alertGroups.length}):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {alertGroups.map((group) => (
+                  <div
+                    key={group.jid}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                      isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">{group.name}</span>
+                    <button
+                      onClick={() => {
+                        const newGroups = alertGroups.filter(g => g.jid !== group.jid);
+                        setAlertGroups(newGroups);
+                        saveAlertGroupsConfig(newGroups, fireAlertToGroup);
+                      }}
+                      className="ml-1 hover:text-red-400"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Group Selector Button */}
+          <button
+            onClick={() => {
+              setShowGroupSelector(!showGroupSelector);
+              if (!showGroupSelector && connectionState.status === 'connected') {
+                fetchGowaGroups();
+              }
+            }}
+            disabled={connectionState.status !== 'connected'}
+            className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+              connectionState.status === 'connected'
+                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/50'
+                : 'bg-gray-500/20 text-gray-500 cursor-not-allowed border border-gray-500/50'
+            }`}
+          >
+            {loadingGroups ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Users className="w-5 h-5" />
+            )}
+            {showGroupSelector ? 'Tutup Daftar Grup' : 'Pilih Grup WhatsApp'}
+          </button>
+
+          {/* Group List */}
+          {showGroupSelector && (
+            <div className={`mt-4 max-h-80 overflow-y-auto rounded-xl ${
+              isDark ? 'bg-gray-900/50' : 'bg-gray-100'
+            }`}>
+              {gowaGroups.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className={`w-12 h-12 mx-auto mb-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                  <p className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                    {connectionState.status !== 'connected'
+                      ? 'Hubungkan WhatsApp terlebih dahulu'
+                      : loadingGroups
+                        ? 'Memuat grup...'
+                        : 'Tidak ada grup ditemukan'}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-700/50">
+                  {gowaGroups.filter(g => !g.IsParent).map((group) => {
+                    const isSelected = alertGroups.some(g => g.jid === group.JID);
+                    return (
+                      <button
+                        key={group.JID}
+                        onClick={() => toggleGroupAlert(group)}
+                        className={`w-full p-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors ${
+                          isSelected ? 'bg-green-500/10' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 text-left">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            isSelected ? 'bg-green-500/30' : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                          }`}>
+                            <MessageCircle className={`w-5 h-5 ${
+                              isSelected ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {group.Name}
+                            </p>
+                            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              {group.Participants?.length || 0} anggota
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          isSelected 
+                            ? 'bg-green-500 text-white' 
+                            : isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-300 text-gray-500'
+                        }`}>
+                          {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Info */}
+          <p className={`mt-4 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            ⚠️ Pastikan bot WhatsApp adalah admin di grup yang dipilih untuk dapat mengirim pesan
+          </p>
         </div>
 
         {/* API Info Card */}
